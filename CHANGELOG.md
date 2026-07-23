@@ -7,7 +7,10 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-*(Vacío — próximos cambios tras el primer release.)*
+### Added
+- Deploy en Fly.io: Dockerfile, `fly.toml`, volumen SQLite, UI servida desde la API.
+- Auth por contraseña compartida (`APP_PASSWORD`, Basic Auth).
+- Documentación de sync local + upload de `bgg.db` ([DEPLOY.md](./DEPLOY.md)).
 
 ## [0.1.0] — 2026-07-23
 

@@ -83,6 +83,11 @@ web/             UI React (paleta Cartón y tinta)
 
 Datos sensibles y locales (`*.db`, `.env`, `data/`) **no** van al repositorio (ver `.gitignore`).
 
+## Deploy (Fly.io)
+
+Para acceder desde el celular o compartir con amigos: ver [DEPLOY.md](./DEPLOY.md)  
+(API + UI + volumen SQLite, sync local y upload de `bgg.db`, contraseña compartida).
+
 ## Changelog
 
 Los cambios relevantes se documentan en [CHANGELOG.md](./CHANGELOG.md). Antes de publicar a GitHub se revisa ese archivo.

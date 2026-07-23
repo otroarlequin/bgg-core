@@ -6,6 +6,8 @@
   "scripts": {
     "build": "tsc",
     "build:web": "npm run build --prefix web",
+    "build:all": "npm run build && npm run build:web",
+    "start": "node dist/api/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:api": "tsx watch src/api/server.ts",
