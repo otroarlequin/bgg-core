@@ -26,6 +26,7 @@ ENV WEB_ROOT=/app/web/dist
 COPY package.json package-lock.json ./
 COPY --from=api-build /app/node_modules ./node_modules
 COPY --from=api-build /app/dist ./dist
+COPY src/storage/migrations ./dist/storage/migrations
 COPY --from=web-build /app/web/dist ./web/dist
 
 RUN mkdir -p /data

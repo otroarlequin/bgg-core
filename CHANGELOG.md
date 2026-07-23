@@ -14,6 +14,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Changed
 - `fly.toml`: región `lax` y `build.dockerfile` explícito (mejor detección en Fly).
+- Dockerfile: incluye migraciones SQL en la imagen (fix crash al abrir SQLite en Fly).
 
 ## [0.1.0] — 2026-07-23
 
