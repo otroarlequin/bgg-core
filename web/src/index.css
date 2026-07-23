@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* Cartón y tinta — app palette */
+@theme {
+  --color-surface: #1a1612;
+  --color-surface-raised: #2a241c;
+  --color-surface-card: #241e18;
+  --color-border: #3d342a;
+  --color-accent: #c47a3a;
+  --color-accent-hover: #d4894a;
+  --color-accent-muted: #8a5a2b;
+  --color-accent-secondary: #8a9a6a;
+  --color-accent-secondary-muted: #5c6b45;
+  --color-ink: #f5efe6;
+  --color-ink-soft: #e8dfd0;
+  --color-muted: #a89880;
+  --color-muted-dim: #7a6c58;
+}
+
+body {
+  @apply min-h-screen bg-surface text-ink;
+}

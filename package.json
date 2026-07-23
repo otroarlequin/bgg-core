@@ -1,0 +1,37 @@
+{
+  "name": "bgg-core",
+  "version": "0.1.0",
+  "description": "Core local para sincronizar y consultar datos de BoardGameGeek",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "build:web": "npm run build --prefix web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev:api": "tsx watch src/api/server.ts",
+    "dev:web": "npm run dev --prefix web",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "sync:collection": "tsx src/cli/sync-collection.ts",
+    "sync:things": "tsx src/cli/sync-things.ts",
+    "sync:plays": "tsx src/cli/sync-plays.ts",
+    "query:collection": "tsx src/cli/query-collection.ts",
+    "activity": "tsx src/cli/activity.ts",
+    "activity:duel": "tsx src/cli/duel.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "bgg-api-ts": "^1.0.0",
+    "dotenv": "^16.4.7",
+    "hono": "^4.7.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}

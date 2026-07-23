@@ -1,0 +1,2 @@
+-- Applied via ensureColumn in database.ts for existing databases.
+-- New columns: artists, publishers, language_dependence on games.
