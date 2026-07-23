@@ -12,6 +12,9 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Auth por contraseña compartida (`APP_PASSWORD`, Basic Auth).
 - Documentación de sync local + upload de `bgg.db` ([DEPLOY.md](./DEPLOY.md)).
 
+### Changed
+- `fly.toml`: región `lax` y `build.dockerfile` explícito (mejor detección en Fly).
+
 ## [0.1.0] — 2026-07-23
 
 Primer release público del core local BGG + interfaz web.

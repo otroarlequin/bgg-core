@@ -17,12 +17,22 @@ Desde la raíz del repo:
 ```bash
 fly auth login
 fly apps create bgg-core
-fly volumes create bgg_data --region mia --size 1
+fly volumes create bgg_data --region lax --size 1
 fly secrets set APP_PASSWORD="tu-clave-compartida"
 fly deploy
 ```
 
 Si el nombre `bgg-core` está ocupado, cambia `app` en [`fly.toml`](./fly.toml) y vuelve a crear la app.
+
+**Importante:** no uses el wizard de “Launch” de la UI si falla detectando el runtime. El repo ya trae `Dockerfile` + `fly.toml`; despliega desde la CLI:
+
+```bash
+fly auth login
+fly apps create bgg-core --org personal   # o el org que uses
+fly volumes create bgg_data --region lax --size 1
+fly secrets set APP_PASSWORD="tu-clave-compartida"
+fly deploy
+```
 
 Abre: `https://bgg-core.fly.dev` (o la URL que muestre `fly status`).  
 El navegador pedirá usuario/contraseña: el **usuario puede ser cualquiera**; importa la contraseña (`APP_PASSWORD`).

@@ -2,9 +2,10 @@
 # See https://fly.io/docs/reference/configuration/
 
 app = 'bgg-core'
-primary_region = 'mia'
+primary_region = 'lax'
 
 [build]
+  dockerfile = 'Dockerfile'
 
 [env]
   HOST = '0.0.0.0'
