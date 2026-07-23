@@ -53,24 +53,37 @@ npm run sync:things
 npm run sync:plays
 ```
 
-Sube el archivo (la máquina debe estar encendida; si está dormida, abre la URL una vez o `fly machine start`):
+Sube el archivo **preservando** datos de app en Fly (`duel_sessions`, `duel_rounds`, `purchase_reviews`):
 
 ```bash
-# PowerShell / bash
-fly ssh sftp put ./data/bgg.db /data/bgg.db
+npm run db:upload
 ```
 
-Luego reinicia para que SQLite reabra el archivo limpio:
+El script descarga el `.db` remoto, fusiona esas tablas en tu sync local, hace `rm` + `sftp put` y reinicia la app. Si no hay DB remota, solo sube la local.
+
+Opciones útiles:
 
 ```bash
+npm run db:upload -- --local-only --old ./tmp/remote.db   # merge sin subir
+npm run db:upload -- --skip-download --old ./tmp/remote.db
+npm run db:upload -- --app bgg-core --new ./data/bgg.db
+```
+
+La máquina debe estar encendida (abre la URL o `fly machine start`).
+
+Upload manual (sin merge; **pierdes** duel/reviews de prod):
+
+```bash
+fly ssh console -a bgg-core -C "rm -f /data/bgg.db /data/bgg.db-wal /data/bgg.db-shm"
+fly ssh sftp put ./data/bgg.db /data/bgg.db
 fly apps restart bgg-core
 ```
 
-**Ojo:** al reemplazar el `.db` pierdes datos solo-de-nube (p. ej. sesiones de duel / reviews del validador guardadas en prod). El sync local es la fuente de verdad de colección/partidas.
+El sync local sigue siendo la fuente de verdad de colección/partidas.
 
 ## Healthcheck
 
-`GET /api/health` responde sin auth (para checks de Fly).
+`GET /api/health` responde sin auth (para checks de Fly) con `{ ok, dbOk, dbPath, collectionCount?, playsCount?, ts }`.
 
 ## Variables
 

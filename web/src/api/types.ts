@@ -275,3 +275,60 @@ export interface PurchaseValidatorOutput {
   savedReviewId?: number;
 }
 
+export interface ShelfOfShameItem {
+  bggId: number;
+  name: string;
+  subtype: string;
+  yearPublished: number | null;
+  thumbnailUrl: string | null;
+  imageUrl: string | null;
+  lastModified: string | null;
+  numPlays: number;
+  personalRating: number | null;
+  weight: number | null;
+}
+
+export interface WhatToPlaySuggestion {
+  bggId: number;
+  name: string;
+  subtype: string;
+  thumbnailUrl: string | null;
+  imageUrl: string | null;
+  yearPublished: number | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  playingTime: number | null;
+  minPlayTime: number | null;
+  maxPlayTime: number | null;
+  weight: number | null;
+  personalRating: number | null;
+  bggRating: number | null;
+  numPlays: number;
+  designers: string[];
+  score: number;
+  reasons: string[];
+}
+
+export interface PlayCalendarDay {
+  date: string;
+  playCount: number;
+}
+
+export interface PlayCalendarResult {
+  from: string;
+  to: string;
+  days: PlayCalendarDay[];
+  currentStreak: number;
+  bestStreak: number;
+  daysWithPlays: number;
+  totalPlays: number;
+}
+
+export interface PlayCalendarDayPlay {
+  playId: number;
+  bggId: number;
+  gameName: string;
+  quantity: number;
+  thumbnailUrl: string | null;
+}
+

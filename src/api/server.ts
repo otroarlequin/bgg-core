@@ -11,6 +11,7 @@ import { playsRoutes } from "./routes/plays.js";
 import { activitiesRoutes } from "./routes/activities.js";
 import { bggRoutes } from "./routes/bgg.js";
 import { loadConfig } from "../config/index.js";
+import { getDb } from "./context.js";
 
 const config = loadConfig();
 const webRoot = resolve(
@@ -33,7 +34,40 @@ app.use(
   }),
 );
 
-app.get("/api/health", (c) => c.json({ ok: true }));
+app.get("/api/health", (c) => {
+  const ts = new Date().toISOString();
+  try {
+    const db = getDb();
+    const collectionCount = (
+      db.prepare("SELECT COUNT(*) AS n FROM collection_entries").get() as {
+        n: number;
+      }
+    ).n;
+    const playsCount = (
+      db.prepare("SELECT COALESCE(SUM(quantity), 0) AS n FROM plays").get() as {
+        n: number;
+      }
+    ).n;
+    return c.json({
+      ok: true,
+      dbOk: true,
+      dbPath: config.dbPath,
+      collectionCount,
+      playsCount,
+      ts,
+    });
+  } catch {
+    return c.json(
+      {
+        ok: false,
+        dbOk: false,
+        dbPath: config.dbPath,
+        ts,
+      },
+      503,
+    );
+  }
+});
 
 app.route("/api/summary", summaryRoutes);
 app.route("/api/collection", collectionRoutes);

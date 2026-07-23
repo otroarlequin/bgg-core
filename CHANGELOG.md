@@ -7,7 +7,18 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-*(Vacío.)*
+### Added
+- Health enriquecido en `/api/health`: `dbOk`, `dbPath`, `collectionCount`, `playsCount`, `ts` (sin auth).
+- CI GitHub Actions (Node 22): `npm test`, `build`, `build:web`.
+- `npm run db:upload` (`scripts/upload-db.ts`): merge de `duel_sessions` / `duel_rounds` / `purchase_reviews` desde la DB remota antes de subir a Fly; documentado en `DEPLOY.md`.
+- Actividad **Shelf of shame**: owned sin partidas, orden antiguos primero (`/api/activities/shelf-of-shame` + UI).
+- Actividad **Qué jugar esta noche**: filtros jugadores/tiempo/peso + sugerencias con score y reshuffle (`/api/activities/what-to-play` + UI).
+- Actividad **Calendario / rachas**: heatmap del último año, rachas y detalle por día (`/api/activities/play-calendar` + UI).
+- `TASKS.md` con backlog (export/compartir, wishlist inteligente, auth cookie) y descartados.
+
+### Changed
+- Validador y Partidas: lista de cards en móvil (`md:` tabla); chips/botones con área táctil mayor en móvil.
+- Hub de Actividades: entradas para las tres actividades nuevas.
 
 ## [0.1.1] — 2026-07-23
 

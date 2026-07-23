@@ -11,6 +11,10 @@ import type {
   PurchaseValidatorOutput,
   MatchFacet,
   PurchaseDecision,
+  ShelfOfShameItem,
+  WhatToPlaySuggestion,
+  PlayCalendarResult,
+  PlayCalendarDayPlay,
 } from "./types";
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -108,4 +112,40 @@ export function postPurchaseValidator(body: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export function fetchShelfOfShame(params: {
+  includeExpansions?: boolean;
+  limit?: number;
+} = {}): Promise<{ total: number; items: ShelfOfShameItem[] }> {
+  return fetchJson(`/api/activities/shelf-of-shame${toQuery(params)}`);
+}
+
+export function postWhatToPlay(body: {
+  players: number;
+  maxTimeMinutes: number;
+  maxWeight?: number;
+  ownedOnly?: boolean;
+  includeExpansions?: boolean;
+  count?: number;
+  seed?: number;
+}): Promise<{ total: number; suggestions: WhatToPlaySuggestion[] }> {
+  return fetchJson("/api/activities/what-to-play", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchPlayCalendar(params: {
+  from?: string;
+  to?: string;
+} = {}): Promise<PlayCalendarResult> {
+  return fetchJson(`/api/activities/play-calendar${toQuery(params)}`);
+}
+
+export function fetchPlayCalendarDay(
+  date: string,
+): Promise<{ date: string; total: number; items: PlayCalendarDayPlay[] }> {
+  return fetchJson(`/api/activities/play-calendar/day${toQuery({ date })}`);
 }

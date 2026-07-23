@@ -18,7 +18,8 @@
     "sync:plays": "tsx src/cli/sync-plays.ts",
     "query:collection": "tsx src/cli/query-collection.ts",
     "activity": "tsx src/cli/activity.ts",
-    "activity:duel": "tsx src/cli/duel.ts"
+    "activity:duel": "tsx src/cli/duel.ts",
+    "db:upload": "tsx scripts/upload-db.ts"
   },
   "engines": {
     "node": ">=20"

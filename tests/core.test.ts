@@ -562,6 +562,245 @@ describe("pairwise-duel", () => {
     expect(result.winner).toBeTruthy();
     expect(currentSession.status).toBe("completed");
   });
+
+  it("filters ownedOnly pool", () => {
+    const { storage, queries } = createTestContext();
+    const now = new Date().toISOString();
+    for (const [id, own] of [
+      [1, true],
+      [2, false],
+    ] as const) {
+      seedCollection(storage, [
+        {
+          collId: id,
+          bggId: id,
+          subtype: "boardgame",
+          name: `Game ${id}`,
+          yearPublished: 2020,
+          imageUrl: null,
+          thumbnailUrl: null,
+          own,
+          prevOwned: false,
+          forTrade: false,
+          want: false,
+          wantToPlay: false,
+          wantToBuy: false,
+          wishlist: false,
+          preordered: false,
+          hasParts: false,
+          wantParts: false,
+          personalRating: 8,
+          comment: null,
+          wishlistPriority: null,
+          numPlays: 1,
+          bggRating: 8,
+          bggRank: null,
+          lastModified: null,
+          syncedAt: now,
+        },
+      ]);
+      storage.games.upsertGame(storage.db, {
+        bggId: id,
+        name: `Game ${id}`,
+        yearPublished: 2020,
+        minPlayers: 2,
+        maxPlayers: 4,
+        playingTime: 60,
+        minPlayTime: 45,
+        maxPlayTime: 60,
+        weight: 2,
+        imageUrl: null,
+        thumbnailUrl: null,
+        description: null,
+        designers: [],
+        artists: [],
+        publishers: [],
+        mechanics: [],
+        categories: [],
+        languageDependence: null,
+        bggRating: 8,
+        bggRank: null,
+        thingSyncedAt: now,
+      });
+      seedPlays(storage, [
+        {
+          play: {
+            playId: id,
+            bggId: id,
+            gameName: `Game ${id}`,
+            date: "2026-03-01",
+            quantity: 1,
+            length: 60,
+            location: "",
+            incomplete: false,
+            nowinstats: true,
+            comments: null,
+            syncedAt: now,
+          },
+          players: [],
+        },
+      ]);
+    }
+
+    const all = queries.queryGamesPlayedInPeriod({
+      from: "2026-01-01",
+      to: "2026-06-30",
+    });
+    expect(all).toHaveLength(2);
+
+    const owned = queries.queryGamesPlayedInPeriod({
+      from: "2026-01-01",
+      to: "2026-06-30",
+      ownedOnly: true,
+    });
+    expect(owned).toHaveLength(1);
+    expect(owned[0].bggId).toBe(1);
+  });
+});
+
+describe("purchase validator overlap", () => {
+  it("scores similar games by shared designers/mechanics", async () => {
+    const { analyzePurchaseCandidate } = await import(
+      "../src/query/purchase-validator.js"
+    );
+    const { storage, db } = createTestContext();
+    const now = new Date().toISOString();
+
+    seedCollection(storage, [
+      {
+        collId: 1,
+        bggId: 10,
+        subtype: "boardgame",
+        name: "Owned Twin",
+        yearPublished: 2020,
+        imageUrl: null,
+        thumbnailUrl: null,
+        own: true,
+        prevOwned: false,
+        forTrade: false,
+        want: false,
+        wantToPlay: false,
+        wantToBuy: false,
+        wishlist: false,
+        preordered: false,
+        hasParts: false,
+        wantParts: false,
+        personalRating: 9,
+        comment: null,
+        wishlistPriority: null,
+        numPlays: 5,
+        bggRating: 8,
+        bggRank: null,
+        lastModified: null,
+        syncedAt: now,
+      },
+      {
+        collId: 2,
+        bggId: 20,
+        subtype: "boardgame",
+        name: "Unrelated",
+        yearPublished: 2010,
+        imageUrl: null,
+        thumbnailUrl: null,
+        own: true,
+        prevOwned: false,
+        forTrade: false,
+        want: false,
+        wantToPlay: false,
+        wantToBuy: false,
+        wishlist: false,
+        preordered: false,
+        hasParts: false,
+        wantParts: false,
+        personalRating: 5,
+        comment: null,
+        wishlistPriority: null,
+        numPlays: 1,
+        bggRating: 6,
+        bggRank: null,
+        lastModified: null,
+        syncedAt: now,
+      },
+    ]);
+
+    storage.games.upsertGame(storage.db, {
+      bggId: 10,
+      name: "Owned Twin",
+      yearPublished: 2020,
+      minPlayers: 2,
+      maxPlayers: 4,
+      playingTime: 60,
+      minPlayTime: 45,
+      maxPlayTime: 60,
+      weight: 2.5,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Ada Designer"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Hand Management"],
+      categories: ["Strategy"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 20,
+      name: "Unrelated",
+      yearPublished: 2010,
+      minPlayers: 2,
+      maxPlayers: 4,
+      playingTime: 30,
+      minPlayTime: 20,
+      maxPlayTime: 30,
+      weight: 1.2,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Other Person"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Roll and Move"],
+      categories: ["Children"],
+      languageDependence: null,
+      bggRating: 6,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+
+    const candidate = {
+      bggId: 99,
+      name: "Candidate",
+      yearPublished: 2024,
+      minPlayers: 2,
+      maxPlayers: 4,
+      playingTime: 60,
+      minPlayTime: 45,
+      maxPlayTime: 60,
+      weight: 2.4,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: "A game",
+      designers: ["Ada Designer"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Hand Management"],
+      categories: ["Strategy"],
+      languageDependence: null,
+      bggRating: 8.2,
+      bggRank: 100,
+      thingSyncedAt: now,
+      thingType: "boardgame",
+    };
+
+    const analysis = analyzePurchaseCandidate(db, candidate);
+    expect(analysis.overlap.topSimilar[0]?.bggId).toBe(10);
+    expect(analysis.overlap.topSimilar[0]?.similarity ?? 0).toBeGreaterThan(
+      analysis.overlap.topSimilar.find((g) => g.bggId === 20)?.similarity ?? 0,
+    );
+  });
 });
 
 describe("activities registry", () => {
@@ -569,5 +808,285 @@ describe("activities registry", () => {
     const { listActivities } = await import("../src/activities/registry.js");
     const ids = listActivities().map((a) => a.id);
     expect(ids).toContain("pairwise-duel");
+  });
+});
+
+describe("shelf of shame / what-to-play / calendar", () => {
+  it("lists owned zero-play base games oldest first", () => {
+    const { storage, queries } = createTestContext();
+    const now = new Date().toISOString();
+
+    seedCollection(storage, [
+      {
+        collId: 1,
+        bggId: 1,
+        subtype: "boardgame",
+        name: "Newer Shame",
+        yearPublished: 2022,
+        imageUrl: null,
+        thumbnailUrl: null,
+        own: true,
+        prevOwned: false,
+        forTrade: false,
+        want: false,
+        wantToPlay: false,
+        wantToBuy: false,
+        wishlist: false,
+        preordered: false,
+        hasParts: false,
+        wantParts: false,
+        personalRating: null,
+        comment: null,
+        wishlistPriority: null,
+        numPlays: 0,
+        bggRating: null,
+        bggRank: null,
+        lastModified: "2024-06-01",
+        syncedAt: now,
+      },
+      {
+        collId: 2,
+        bggId: 2,
+        subtype: "boardgame",
+        name: "Older Shame",
+        yearPublished: 2015,
+        imageUrl: null,
+        thumbnailUrl: null,
+        own: true,
+        prevOwned: false,
+        forTrade: false,
+        want: false,
+        wantToPlay: false,
+        wantToBuy: false,
+        wishlist: false,
+        preordered: false,
+        hasParts: false,
+        wantParts: false,
+        personalRating: null,
+        comment: null,
+        wishlistPriority: null,
+        numPlays: 0,
+        bggRating: null,
+        bggRank: null,
+        lastModified: "2020-01-01",
+        syncedAt: now,
+      },
+      {
+        collId: 3,
+        bggId: 3,
+        subtype: "boardgame",
+        name: "Played",
+        yearPublished: 2018,
+        imageUrl: null,
+        thumbnailUrl: null,
+        own: true,
+        prevOwned: false,
+        forTrade: false,
+        want: false,
+        wantToPlay: false,
+        wantToBuy: false,
+        wishlist: false,
+        preordered: false,
+        hasParts: false,
+        wantParts: false,
+        personalRating: 8,
+        comment: null,
+        wishlistPriority: null,
+        numPlays: 2,
+        bggRating: null,
+        bggRank: null,
+        lastModified: "2019-01-01",
+        syncedAt: now,
+      },
+    ]);
+
+    const shame = queries.queryShelfOfShame();
+    expect(shame.map((g) => g.bggId)).toEqual([2, 1]);
+  });
+
+  it("suggests games that fit players and time", () => {
+    const { storage, queries } = createTestContext();
+    const now = new Date().toISOString();
+
+    seedCollection(storage, [
+      {
+        collId: 1,
+        bggId: 10,
+        subtype: "boardgame",
+        name: "Short Fit",
+        yearPublished: 2020,
+        imageUrl: null,
+        thumbnailUrl: null,
+        own: true,
+        prevOwned: false,
+        forTrade: false,
+        want: false,
+        wantToPlay: false,
+        wantToBuy: false,
+        wishlist: false,
+        preordered: false,
+        hasParts: false,
+        wantParts: false,
+        personalRating: 8,
+        comment: null,
+        wishlistPriority: null,
+        numPlays: 3,
+        bggRating: 7.5,
+        bggRank: null,
+        lastModified: null,
+        syncedAt: now,
+      },
+      {
+        collId: 2,
+        bggId: 20,
+        subtype: "boardgame",
+        name: "Too Long",
+        yearPublished: 2020,
+        imageUrl: null,
+        thumbnailUrl: null,
+        own: true,
+        prevOwned: false,
+        forTrade: false,
+        want: false,
+        wantToPlay: false,
+        wantToBuy: false,
+        wishlist: false,
+        preordered: false,
+        hasParts: false,
+        wantParts: false,
+        personalRating: 9,
+        comment: null,
+        wishlistPriority: null,
+        numPlays: 5,
+        bggRating: 8,
+        bggRank: null,
+        lastModified: null,
+        syncedAt: now,
+      },
+    ]);
+
+    storage.games.upsertGame(storage.db, {
+      bggId: 10,
+      name: "Short Fit",
+      yearPublished: 2020,
+      minPlayers: 2,
+      maxPlayers: 4,
+      playingTime: 45,
+      minPlayTime: 30,
+      maxPlayTime: 60,
+      weight: 2,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: [],
+      artists: [],
+      publishers: [],
+      mechanics: [],
+      categories: [],
+      languageDependence: null,
+      bggRating: 7.5,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 20,
+      name: "Too Long",
+      yearPublished: 2020,
+      minPlayers: 2,
+      maxPlayers: 4,
+      playingTime: 180,
+      minPlayTime: 150,
+      maxPlayTime: 200,
+      weight: 3,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: [],
+      artists: [],
+      publishers: [],
+      mechanics: [],
+      categories: [],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+
+    const suggestions = queries.queryWhatToPlay({
+      players: 3,
+      maxTimeMinutes: 90,
+      seed: 1,
+    });
+    expect(suggestions.some((s) => s.bggId === 10)).toBe(true);
+    expect(suggestions.some((s) => s.bggId === 20)).toBe(false);
+  });
+
+  it("computes play calendar streaks", () => {
+    const { storage, queries } = createTestContext();
+    const now = new Date().toISOString();
+
+    seedPlays(storage, [
+      {
+        play: {
+          playId: 1,
+          bggId: 1,
+          gameName: "A",
+          date: "2026-07-20",
+          quantity: 1,
+          length: 30,
+          location: "",
+          incomplete: false,
+          nowinstats: true,
+          comments: null,
+          syncedAt: now,
+        },
+        players: [],
+      },
+      {
+        play: {
+          playId: 2,
+          bggId: 1,
+          gameName: "A",
+          date: "2026-07-21",
+          quantity: 2,
+          length: 30,
+          location: "",
+          incomplete: false,
+          nowinstats: true,
+          comments: null,
+          syncedAt: now,
+        },
+        players: [],
+      },
+      {
+        play: {
+          playId: 3,
+          bggId: 2,
+          gameName: "B",
+          date: "2026-07-23",
+          quantity: 1,
+          length: 40,
+          location: "",
+          incomplete: false,
+          nowinstats: true,
+          comments: null,
+          syncedAt: now,
+        },
+        players: [],
+      },
+    ]);
+
+    const cal = queries.queryPlayCalendar({
+      from: "2026-07-01",
+      to: "2026-07-23",
+    });
+    expect(cal.daysWithPlays).toBe(3);
+    expect(cal.totalPlays).toBe(4);
+    expect(cal.bestStreak).toBe(2);
+    expect(cal.currentStreak).toBe(1);
+
+    const day = queries.queryPlaysOnDate("2026-07-21");
+    expect(day).toHaveLength(1);
+    expect(day[0].quantity).toBe(2);
   });
 });

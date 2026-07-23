@@ -66,7 +66,7 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg border px-2 py-1 text-left text-xs transition ${
+      className={`min-h-10 rounded-lg border px-3 py-2 text-left text-xs transition md:min-h-0 md:px-2 md:py-1 ${
         active
           ? "border-accent bg-accent/15 text-accent"
           : "border-border bg-surface/60 text-ink-soft hover:border-accent/50 hover:text-ink"
@@ -119,80 +119,130 @@ function MatchesTable({ items }: { items: MatchGameRow[] }) {
     );
   }
 
+  const showSim = items.some((i) => i.similarity != null);
+
   return (
-    <div className="overflow-hidden rounded-xl border border-border">
-      <table className="min-w-full text-sm">
-        <thead className="bg-surface-raised text-left text-muted">
-          <tr>
-            <th className="px-3 py-2">Juego</th>
-            <th className="px-3 py-2">Estado</th>
-            <th className="px-3 py-2">Rating</th>
-            <th className="px-3 py-2">Partidas</th>
-            <th className="px-3 py-2">Peso</th>
-            {items.some((i) => i.similarity != null) ? (
-              <th className="px-3 py-2">Sim.</th>
-            ) : null}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr
-              key={item.bggId}
-              className="border-t border-border bg-surface/40"
-            >
-              <td className="px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <div className="relative shrink-0">
-                    <img
-                      src={
-                        item.thumbnailUrl ??
-                        "https://placehold.co/40x40/2a241c/a89880?text=BGG"
-                      }
-                      alt=""
-                      className="h-9 w-9 rounded object-cover bg-surface-card"
-                    />
-                    <div className="absolute -bottom-1 -right-1">
-                      <GameSubtypeBadge subtype={item.subtype} size="sm" />
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start gap-2">
-                      <p className="min-w-0 truncate font-medium text-ink">
-                        {item.name}
-                      </p>
-                      <BggLink bggId={item.bggId} />
-                    </div>
-                  </div>
+    <>
+      <ul className="space-y-2 md:hidden">
+        {items.map((item) => (
+          <li
+            key={item.bggId}
+            className="rounded-xl border border-border bg-surface/40 p-3"
+          >
+            <div className="flex gap-3">
+              <div className="relative shrink-0">
+                <img
+                  src={
+                    item.thumbnailUrl ??
+                    "https://placehold.co/40x40/2a241c/a89880?text=BGG"
+                  }
+                  alt=""
+                  className="h-14 w-14 rounded-lg object-cover bg-surface-card"
+                />
+                <div className="absolute -bottom-1 -right-1">
+                  <GameSubtypeBadge subtype={item.subtype} size="sm" />
                 </div>
-              </td>
-              <td className="px-3 py-2">
+              </div>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="flex items-start gap-2">
+                  <p className="min-w-0 flex-1 font-medium leading-snug text-ink">
+                    {item.name}
+                  </p>
+                  <BggLink bggId={item.bggId} />
+                </div>
                 <StatusBadges
                   own={item.own}
                   wishlist={item.wishlist}
                   preordered={item.preordered}
                 />
-              </td>
-              <td className="px-3 py-2 tabular-nums text-ink-soft">
-                {item.personalRating != null ? item.personalRating : "—"}
-              </td>
-              <td className="px-3 py-2 tabular-nums text-ink-soft">
-                {item.numPlays}
-              </td>
-              <td className="px-3 py-2 tabular-nums text-ink-soft">
-                {item.weight != null ? item.weight.toFixed(1) : "—"}
-              </td>
-              {items.some((i) => i.similarity != null) ? (
-                <td className="px-3 py-2 tabular-nums text-accent">
-                  {item.similarity != null
-                    ? `${Math.round(item.similarity * 100)}%`
-                    : "—"}
-                </td>
-              ) : null}
+                <p className="text-xs text-muted">
+                  ★ {item.personalRating != null ? item.personalRating : "—"}
+                  {" · "}
+                  {item.numPlays} partidas
+                  {" · "}
+                  peso {item.weight != null ? item.weight.toFixed(1) : "—"}
+                  {showSim && item.similarity != null
+                    ? ` · sim ${Math.round(item.similarity * 100)}%`
+                    : ""}
+                </p>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-hidden rounded-xl border border-border md:block">
+        <table className="min-w-full text-sm">
+          <thead className="bg-surface-raised text-left text-muted">
+            <tr>
+              <th className="px-3 py-2">Juego</th>
+              <th className="px-3 py-2">Estado</th>
+              <th className="px-3 py-2">Rating</th>
+              <th className="px-3 py-2">Partidas</th>
+              <th className="px-3 py-2">Peso</th>
+              {showSim ? <th className="px-3 py-2">Sim.</th> : null}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr
+                key={item.bggId}
+                className="border-t border-border bg-surface/40"
+              >
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="relative shrink-0">
+                      <img
+                        src={
+                          item.thumbnailUrl ??
+                          "https://placehold.co/40x40/2a241c/a89880?text=BGG"
+                        }
+                        alt=""
+                        className="h-9 w-9 rounded object-cover bg-surface-card"
+                      />
+                      <div className="absolute -bottom-1 -right-1">
+                        <GameSubtypeBadge subtype={item.subtype} size="sm" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start gap-2">
+                        <p className="min-w-0 truncate font-medium text-ink">
+                          {item.name}
+                        </p>
+                        <BggLink bggId={item.bggId} />
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-3 py-2">
+                  <StatusBadges
+                    own={item.own}
+                    wishlist={item.wishlist}
+                    preordered={item.preordered}
+                  />
+                </td>
+                <td className="px-3 py-2 tabular-nums text-ink-soft">
+                  {item.personalRating != null ? item.personalRating : "—"}
+                </td>
+                <td className="px-3 py-2 tabular-nums text-ink-soft">
+                  {item.numPlays}
+                </td>
+                <td className="px-3 py-2 tabular-nums text-ink-soft">
+                  {item.weight != null ? item.weight.toFixed(1) : "—"}
+                </td>
+                {showSim ? (
+                  <td className="px-3 py-2 tabular-nums text-accent">
+                    {item.similarity != null
+                      ? `${Math.round(item.similarity * 100)}%`
+                      : "—"}
+                  </td>
+                ) : null}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -515,7 +565,7 @@ export function PurchaseValidatorActivity() {
             type="button"
             disabled={loading || !input.trim()}
             onClick={() => void handleResolve()}
-            className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-surface hover:bg-accent-hover disabled:opacity-50"
+            className="mt-4 min-h-11 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-surface hover:bg-accent-hover disabled:opacity-50 md:min-h-0 md:py-2"
           >
             {loading ? "Buscando..." : "Analizar"}
           </button>
