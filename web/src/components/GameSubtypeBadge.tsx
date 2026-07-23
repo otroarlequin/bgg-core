@@ -34,12 +34,15 @@ function ExpansionIcon({ className = "h-4 w-4" }: { className?: string }) {
 interface GameSubtypeBadgeProps {
   subtype?: string | null;
   className?: string;
+  /** Compact circle for dense tables/lists. */
+  size?: "md" | "sm";
 }
 
 /** Circular subtype badge (card-3 placement style, cartón y tinta colors). */
 export function GameSubtypeBadge({
   subtype,
   className = "",
+  size = "md",
 }: GameSubtypeBadgeProps) {
   const kind = normalizeSubtype(subtype);
   if (!kind) return null;
@@ -52,17 +55,21 @@ export function GameSubtypeBadge({
     ? "border-accent-secondary/50 bg-accent-secondary text-surface shadow-accent-secondary/40"
     : "border-accent/50 bg-accent text-surface shadow-accent/40";
 
+  const box = size === "sm" ? "h-7 w-7" : "h-11 w-11";
+  const icon = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
+  const text = size === "sm" ? "text-[6px]" : "text-[7px]";
+
   return (
     <span
       title={label}
-      className={`inline-flex h-11 w-11 flex-col items-center justify-center rounded-full border-2 shadow-lg ${palette} ${className}`}
+      className={`inline-flex ${box} flex-col items-center justify-center rounded-full border-2 shadow-lg ${palette} ${className}`}
     >
       {isExpansion ? (
-        <ExpansionIcon className="h-3.5 w-3.5" />
+        <ExpansionIcon className={icon} />
       ) : (
-        <MeepleIcon className="h-3.5 w-3.5" />
+        <MeepleIcon className={icon} />
       )}
-      <span className="mt-0.5 text-[7px] font-black leading-none tracking-wider">
+      <span className={`mt-0.5 font-black leading-none tracking-wider ${text}`}>
         {shortLabel}
       </span>
       <span className="sr-only">{label}</span>

@@ -225,6 +225,7 @@ export interface CandidateGameView {
   personalRating: number | null;
   numPlays: number;
   collectionStatus: CollectionStatusFlags | null;
+  subtype: string | null;
 }
 
 export interface MatchGameRow {

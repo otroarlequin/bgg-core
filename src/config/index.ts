@@ -39,14 +39,24 @@ export function loadConfig(): AppConfig {
   };
 }
 
+export function requireBggToken(config: AppConfig): string {
+  if (!config.bggToken) {
+    throw new Error(
+      "BGG_TOKEN es requerido para buscar/consultar juegos en BGG (p. ej. validador de compras). Configúralo en .env o como secret en Fly.",
+    );
+  }
+  return config.bggToken;
+}
+
 export function requireBggCredentials(config: AppConfig): {
   token: string;
   username: string;
 } {
-  if (!config.bggToken || !config.bggUsername) {
+  const token = requireBggToken(config);
+  if (!config.bggUsername) {
     throw new Error(
-      "BGG_TOKEN y BGG_USERNAME son requeridos. Copia .env.example a .env y completa los valores. Ver SETUP.md.",
+      "BGG_USERNAME es requerido para sincronizar colección/partidas. Copia .env.example a .env y completa los valores. Ver SETUP.md.",
     );
   }
-  return { token: config.bggToken, username: config.bggUsername };
+  return { token, username: config.bggUsername };
 }

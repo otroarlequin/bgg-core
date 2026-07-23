@@ -7,14 +7,25 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+*(Vacío.)*
+
+## [0.1.1] — 2026-07-23
+
 ### Added
-- Deploy en Fly.io: Dockerfile, `fly.toml`, volumen SQLite, UI servida desde la API.
-- Auth por contraseña compartida (`APP_PASSWORD`, Basic Auth).
-- Documentación de sync local + upload de `bgg.db` ([DEPLOY.md](./DEPLOY.md)).
+- Deploy en Fly.io: Dockerfile, `fly.toml`, volumen SQLite, UI servida desde la API, Basic Auth (`APP_PASSWORD`).
+- Documentación de sync local + upload de `bgg.db` y secrets BGG ([DEPLOY.md](./DEPLOY.md)).
+- `requireBggToken` para lookup/validador (el username solo es obligatorio en sync).
+- Badges Base/Exp compactos en listas/tablas del validador de compras (matches, overlap, búsqueda).
+- `subtype` en el candidato del validador (colección o tipo BGG `/thing`).
 
 ### Changed
-- `fly.toml`: región `lax` y `build.dockerfile` explícito (mejor detección en Fly).
-- Dockerfile: incluye migraciones SQL en la imagen (fix crash al abrir SQLite en Fly).
+- `fly.toml`: región `lax` y `build.dockerfile` explícito.
+- Dockerfile: incluye migraciones SQL en la imagen.
+- Validador: la descripción del candidato usa la altura de la card (menos scroll prematuro).
+- `DEPLOY.md`: documenta `BGG_TOKEN` en Fly para el validador.
+
+### Notes
+- Sync de colección/partidas sigue siendo local; en Fly se publica el `.db` y, para el validador, el secret `BGG_TOKEN`.
 
 ## [0.1.0] — 2026-07-23
 
@@ -45,8 +56,8 @@ Primer release público del core local BGG + interfaz web.
 ### Notes
 
 - Los datos locales (`*.db`, `.env`, `data/`) no se versionan.
-- La UI se ejecuta en local (`npm run dev`); el hosting remoto se evaluará en un paso posterior.
 - No se incluye exposición vía túnel/LAN en este release (retirado a propósito).
 
-[Unreleased]: https://github.com/otroarlequin/bgg-core/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/otroarlequin/bgg-core/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/otroarlequin/bgg-core/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/otroarlequin/bgg-core/releases/tag/v0.1.0

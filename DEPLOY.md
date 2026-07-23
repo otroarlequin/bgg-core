@@ -77,9 +77,16 @@ fly apps restart bgg-core
 | Variable | Uso |
 |----------|-----|
 | `APP_PASSWORD` | Basic Auth compartida (secret) |
+| `BGG_TOKEN` | Secret: búsqueda/thing en el validador de compras |
+| `BGG_USERNAME` | Opcional en Fly (solo sync local) |
 | `BGG_DB_PATH` | Default `/data/bgg.db` |
 | `WEB_ROOT` | Default `/app/web/dist` |
-| `BGG_TOKEN` / `BGG_USERNAME` | No hacen falta en Fly si solo subes el `.db` |
+
+Para el validador en producción:
+
+```bash
+fly secrets set BGG_TOKEN="tu-token" -a bgg-core
+```
 
 ## Coste / sleep
 

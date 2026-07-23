@@ -5,7 +5,7 @@ import {
   parseBggGameInput,
   searchGames,
 } from "../../bgg/lookup.js";
-import { loadConfig, requireBggCredentials } from "../../config/index.js";
+import { loadConfig, requireBggToken } from "../../config/index.js";
 import { getDb } from "../context.js";
 import { getCollectionEntryByBggId } from "../../storage/repos/collection.js";
 
@@ -13,8 +13,7 @@ export const bggRoutes = new Hono();
 
 function getClient() {
   const config = loadConfig();
-  const { token } = requireBggCredentials(config);
-  return createBggClient(token);
+  return createBggClient(requireBggToken(config));
 }
 
 bggRoutes.get("/search", async (c) => {

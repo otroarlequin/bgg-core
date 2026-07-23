@@ -4,7 +4,7 @@ import {
   parseBggGameInput,
   searchGames,
 } from "../../bgg/lookup.js";
-import { loadConfig, requireBggCredentials } from "../../config/index.js";
+import { loadConfig, requireBggToken } from "../../config/index.js";
 import {
   analyzePurchaseCandidate,
   queryFacetMatches,
@@ -44,8 +44,7 @@ export interface PurchaseValidatorOutput {
 
 function getClient() {
   const config = loadConfig();
-  const { token } = requireBggCredentials(config);
-  return createBggClient(token);
+  return createBggClient(requireBggToken(config));
 }
 
 export async function runPurchaseValidator(

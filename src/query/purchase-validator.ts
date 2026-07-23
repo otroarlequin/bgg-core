@@ -44,6 +44,8 @@ export interface CandidateGameView {
   personalRating: number | null;
   numPlays: number;
   collectionStatus: CollectionStatusFlags | null;
+  /** boardgame | boardgameexpansion when known (colección o thing). */
+  subtype: string | null;
 }
 
 export interface MatchGameRow {
@@ -249,6 +251,7 @@ export function buildCandidateView(
     personalRating: collectionRow?.personal_rating ?? null,
     numPlays: collectionRow?.num_plays ?? 0,
     collectionStatus: status,
+    subtype: collectionRow?.subtype ?? game.thingType ?? null,
   };
 }
 

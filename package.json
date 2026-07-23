@@ -1,6 +1,6 @@
 {
   "name": "bgg-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Core local para sincronizar y consultar datos de BoardGameGeek",
   "type": "module",
   "scripts": {

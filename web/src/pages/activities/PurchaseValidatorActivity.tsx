@@ -10,6 +10,7 @@ import type {
   PurchaseDecision,
 } from "../../api/types";
 import { BggLink } from "../../components/BggLink";
+import { GameSubtypeBadge } from "../../components/GameSubtypeBadge";
 
 type Step = "input" | "search" | "analysis";
 
@@ -141,14 +142,19 @@ function MatchesTable({ items }: { items: MatchGameRow[] }) {
             >
               <td className="px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <img
-                    src={
-                      item.thumbnailUrl ??
-                      "https://placehold.co/40x40/1e293b/94a3b8?text=BGG"
-                    }
-                    alt=""
-                    className="h-9 w-9 rounded object-cover bg-surface-card"
-                  />
+                  <div className="relative shrink-0">
+                    <img
+                      src={
+                        item.thumbnailUrl ??
+                        "https://placehold.co/40x40/2a241c/a89880?text=BGG"
+                      }
+                      alt=""
+                      className="h-9 w-9 rounded object-cover bg-surface-card"
+                    />
+                    <div className="absolute -bottom-1 -right-1">
+                      <GameSubtypeBadge subtype={item.subtype} size="sm" />
+                    </div>
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
                       <p className="min-w-0 truncate font-medium text-ink">
@@ -156,7 +162,6 @@ function MatchesTable({ items }: { items: MatchGameRow[] }) {
                       </p>
                       <BggLink bggId={item.bggId} />
                     </div>
-                    <p className="text-[11px] text-muted-dim">{item.subtype}</p>
                   </div>
                 </div>
               </td>
@@ -213,18 +218,25 @@ function CandidatePanel({
 
   return (
     <div className="rounded-2xl border border-border bg-surface-raised/80 p-4">
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="min-w-0 space-y-3">
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-stretch">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3">
           <div className="flex gap-3">
-            <img
-              src={
-                candidate.imageUrl ??
-                candidate.thumbnailUrl ??
-                "https://placehold.co/120x120/1e293b/94a3b8?text=BGG"
-              }
-              alt={candidate.name}
-              className="h-24 w-24 shrink-0 rounded-lg object-cover bg-surface-card"
-            />
+            <div className="relative shrink-0">
+              <img
+                src={
+                  candidate.imageUrl ??
+                  candidate.thumbnailUrl ??
+                  "https://placehold.co/120x120/2a241c/a89880?text=BGG"
+                }
+                alt={candidate.name}
+                className="h-24 w-24 rounded-lg object-cover bg-surface-card"
+              />
+              {candidate.subtype ? (
+                <div className="absolute -left-1.5 -top-1.5">
+                  <GameSubtypeBadge subtype={candidate.subtype} size="sm" />
+                </div>
+              ) : null}
+            </div>
             <div className="min-w-0 flex-1 space-y-1.5">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-xl font-bold leading-snug text-ink">
@@ -261,9 +273,11 @@ function CandidatePanel({
             </div>
           </div>
           {candidate.description ? (
-            <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-muted">
-              {candidate.description}
-            </p>
+            <div className="min-h-[14rem] flex-1 overflow-y-auto rounded-lg border border-border/60 bg-surface/40 p-3 lg:min-h-0">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">
+                {candidate.description}
+              </p>
+            </div>
           ) : (
             <p className="text-sm text-muted-dim">Sin descripción disponible.</p>
           )}
@@ -515,6 +529,7 @@ export function PurchaseValidatorActivity() {
             {searchResults.map((hit) => (
               <li key={hit.bggId}>
                 <div className="flex items-center gap-2 bg-surface/40 px-4 py-3 hover:bg-surface-raised/60">
+                  <GameSubtypeBadge subtype={hit.type} size="sm" />
                   <button
                     type="button"
                     disabled={loading}
@@ -523,7 +538,7 @@ export function PurchaseValidatorActivity() {
                   >
                     <span className="font-medium text-ink">{hit.name}</span>
                     <span className="shrink-0 text-xs text-muted-dim">
-                      {hit.yearPublished ?? "—"} · {hit.type} · #{hit.bggId}
+                      {hit.yearPublished ?? "—"} · #{hit.bggId}
                     </span>
                   </button>
                   <BggLink bggId={hit.bggId} />

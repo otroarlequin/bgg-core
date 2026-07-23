@@ -22,6 +22,8 @@ export interface Game {
   bggRating: number | null;
   bggRank: number | null;
   thingSyncedAt: string;
+  /** From BGG /thing `type` attribute; not persisted on games table. */
+  thingType?: string | null;
 }
 
 export interface CollectionEntry {

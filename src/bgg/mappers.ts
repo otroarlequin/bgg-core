@@ -62,6 +62,7 @@ interface BggCollectionItem {
 
 interface BggThingItem {
   id: string | number;
+  type?: string;
   name?: BggName[];
   yearpublished?: { value?: string | number };
   minplayers?: { value?: string | number };
@@ -275,6 +276,7 @@ export function mapThingItemToGame(item: BggThingItem, syncedAt: string): Game {
     bggRating: toFloat(item.statistics?.ratings?.average?.value),
     bggRank: extractBoardgameRank(item),
     thingSyncedAt: syncedAt,
+    thingType: item.type ? String(item.type) : null,
   };
 }
 
