@@ -14,14 +14,17 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Actividad **Shelf of shame**: owned sin partidas, orden antiguos primero (`/api/activities/shelf-of-shame` + UI).
 - Actividad **Qué jugar esta noche**: filtros jugadores/tiempo/peso + sugerencias con score y reshuffle (`/api/activities/what-to-play` + UI).
 - Actividad **Calendario / rachas**: heatmap del último año, rachas y detalle por día (`/api/activities/play-calendar` + UI).
+- Actividad **Wishlist inteligente**: perfil de mesa + gaps, ranking de wishlist/want-to-play con razones tipadas, modos Equilibrio / Más de lo mismo / Cubre huecos, y discovery BGG acotado por diseñadores (`/api/activities/smart-wishlist` + UI).
 - `TASKS.md` con backlog (export/compartir, wishlist inteligente, auth cookie) y descartados.
 
 ### Changed
 - Validador y Partidas: lista de cards en móvil (`md:` tabla); chips/botones con área táctil mayor en móvil.
-- Hub de Actividades: entradas para las tres actividades nuevas.
+- Hub de Actividades: entradas para las actividades nuevas (incl. wishlist inteligente).
 - **Qué jugar esta noche:** jugadores con rango de facets (hasta 30) + slider; filtros de categorías, mecánicas y dependencia del idioma (mismo patrón que duel/colección); el pool de sugerencias respeta esos filtros (`poolTotal` en la UI).
 - Calendario / rachas: layout horizontal sin scroll H, presets de periodo (1/3/6/12 meses), separadores mes/año, detalle de partida expandible.
 - `TASKS.md` actualizado con backlog priorizado y trabajo reciente.
+- **Export / compartir (v1):** descarga PNG + copiar texto para ganador del duel y tops del resumen (presencial/virtual).
+- **Wishlist inteligente:** copy de fit más honesto (colección vs partidas); owned sin partidas pesan poco; tags de capacidad BGG (p. ej. Solo/Solitaire) con peso bajo y sin headline engañoso.
 
 ## [0.1.1] — 2026-07-23
 

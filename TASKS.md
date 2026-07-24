@@ -4,15 +4,13 @@ Backlog y decisiones de producto para bgg-core.
 
 ## Pendiente
 
-Orden sugerido:
-
-1. **Publicar CI en GitHub** — `.github/workflows/ci.yml` sigue solo en disco local (el push falló sin scope `workflow`). Tras `gh auth refresh -s workflow`, commit + push.
-2. **Export / compartir** — exportar o compartir ganador de duel, tops del resumen u otras listas (imagen/texto).
+1. **Publicar CI en GitHub** — commit local `856aa54` listo; falta `gh auth refresh -s workflow` y `git push`.
 
 ## Diferido
 
-- **Wishlist inteligente:** sugerencias de wishlist a partir de overlaps, gaps de mecánicas/diseñadores o patrones de juego.
 - **Auth por sesión / cookie:** dejar Basic Auth y pasar a login con cookie/sesión compartida (mejor UX móvil).
+- **Export “sugerencia de la noche”:** tarjeta PNG de Qué jugar esta noche (descartado en v1; se puede retomar).
+- **Export Shelf of shame / validador / heatmap:** no en v1.
 
 ## Descartado
 
@@ -36,3 +34,5 @@ Orden sugerido:
 - **Shelf of shame** — owned sin partidas, antiguos primero.
 - **Qué jugar esta noche** — score + reshuffle; filtros jugadores (rango amplio), tiempo, peso, categorías, mecánicas, idioma; pool filtrado real + indicador `poolTotal`.
 - **Calendario / rachas** — heatmap horizontal sin scroll H, etiquetas de mes, separadores mes/año, presets (1/3/6/12 meses), filtro de fechas, detalle de partida expandible en la misma vista.
+- **Wishlist inteligente** — perfil + gaps, ranking local con razones, modos, discovery BGG acotado (diseñadores) con degradación sin token.
+- **Export / compartir (v1)** — PNG + texto: ganador del duel; tops presencial/virtual del resumen.

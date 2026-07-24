@@ -1,10 +1,12 @@
 import type { Activity } from "./types.js";
 import { pairwiseDuelActivity } from "./pairwise-duel/index.js";
 import { purchaseValidatorActivity } from "./purchase-validator/index.js";
+import { smartWishlistActivity } from "./smart-wishlist/index.js";
 
 const activities: Activity<unknown, unknown>[] = [
   pairwiseDuelActivity as Activity<unknown, unknown>,
   purchaseValidatorActivity as Activity<unknown, unknown>,
+  smartWishlistActivity as Activity<unknown, unknown>,
 ];
 
 const registry = new Map(activities.map((a) => [a.id, a]));

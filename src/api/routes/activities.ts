@@ -5,6 +5,11 @@ import {
   runPurchaseValidator,
   type PurchaseValidatorParams,
 } from "../../activities/purchase-validator/index.js";
+import {
+  runSmartWishlist,
+  type SmartWishlistRunParams,
+} from "../../activities/smart-wishlist/index.js";
+import type { SmartWishlistMode } from "../../query/smart-wishlist.js";
 import { getActivityContext } from "../context.js";
 
 export const activitiesRoutes = new Hono();
@@ -114,4 +119,26 @@ activitiesRoutes.get("/play-calendar/day", (c) => {
   const ctx = getActivityContext();
   const items = ctx.queries.queryPlaysOnDate(date);
   return c.json({ date, total: items.length, items });
+});
+
+activitiesRoutes.get("/smart-wishlist", async (c) => {
+  const modeRaw = c.req.query("mode") ?? "balance";
+  const mode = (
+    modeRaw === "more" || modeRaw === "gaps" || modeRaw === "balance"
+      ? modeRaw
+      : "balance"
+  ) as SmartWishlistMode;
+  const params: SmartWishlistRunParams = {
+    mode,
+    includeWantToPlay: c.req.query("includeWantToPlay") !== "false",
+    includeExpansions: c.req.query("includeExpansions") === "true",
+    includeDiscovery: c.req.query("includeDiscovery") !== "false",
+  };
+  try {
+    const result = await runSmartWishlist(params, getActivityContext());
+    return c.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ message }, 400);
+  }
 });

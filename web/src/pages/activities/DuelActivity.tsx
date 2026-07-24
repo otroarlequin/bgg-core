@@ -11,6 +11,12 @@ import {
   MultiFilterSelect,
 } from "../../components/FilterField";
 import { GameCard } from "../../components/GameCard";
+import { ExportActions } from "../../components/ExportActions";
+import {
+  duelWinnerPlainText,
+  renderDuelWinnerCard,
+} from "../../export/duelWinnerCard";
+import { copyText, downloadPng } from "../../export/canvas";
 
 type DuelStep = "setup" | "duel" | "winner";
 
@@ -421,6 +427,35 @@ export function DuelActivity() {
             wins={output.winner.wins}
             winRate={output.winner.winRate}
             totalMinutes={output.winner.totalMinutes}
+          />
+          <ExportActions
+            className="flex flex-col items-center"
+            onDownloadPng={async () => {
+              const periodFrom =
+                output.session?.periodFrom ?? from;
+              const periodTo = output.session?.periodTo ?? to;
+              const canvas = await renderDuelWinnerCard({
+                winner: output.winner!,
+                periodFrom,
+                periodTo,
+              });
+              downloadPng(
+                canvas,
+                `duel-winner-${output.winner!.bggId}`,
+              );
+            }}
+            onCopyText={async () => {
+              const periodFrom =
+                output.session?.periodFrom ?? from;
+              const periodTo = output.session?.periodTo ?? to;
+              await copyText(
+                duelWinnerPlainText({
+                  winner: output.winner!,
+                  periodFrom,
+                  periodTo,
+                }),
+              );
+            }}
           />
           <button
             type="button"

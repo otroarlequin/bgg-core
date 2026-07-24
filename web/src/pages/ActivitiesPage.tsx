@@ -4,6 +4,7 @@ import { PurchaseValidatorActivity } from "./activities/PurchaseValidatorActivit
 import { ShelfOfShameActivity } from "./activities/ShelfOfShameActivity";
 import { WhatToPlayActivity } from "./activities/WhatToPlayActivity";
 import { PlayCalendarActivity } from "./activities/PlayCalendarActivity";
+import { SmartWishlistActivity } from "./activities/SmartWishlistActivity";
 
 type ActivityId =
   | "hub"
@@ -11,7 +12,8 @@ type ActivityId =
   | "purchase-validator"
   | "what-to-play"
   | "play-calendar"
-  | "shelf-of-shame";
+  | "shelf-of-shame"
+  | "smart-wishlist";
 
 const activities: Array<{
   id: Exclude<ActivityId, "hub">;
@@ -32,6 +34,13 @@ const activities: Array<{
     description:
       "Analiza un juego de BGG frente a tu colección (owned, wishlist, preordered) para decidir si te interesa.",
     Icon: CartIcon,
+  },
+  {
+    id: "smart-wishlist",
+    title: "Wishlist inteligente",
+    description:
+      "Prioriza tu wishlist según cómo juegas, señala huecos y sugiere descubrimientos acotados desde BGG.",
+    Icon: WishlistIcon,
   },
   {
     id: "what-to-play",
@@ -108,6 +117,16 @@ function ShameIcon() {
   );
 }
 
+function WishlistIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M8 4h9l-1.5 14H9.5L8 4z" strokeLinejoin="round" />
+      <path d="M10 8h6M10.5 12h5M11 16h4" strokeLinecap="round" />
+      <path d="M7 7H5.5A1.5 1.5 0 0 0 4 8.5v9A1.5 1.5 0 0 0 5.5 19H14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ActivitiesPage() {
   const [active, setActive] = useState<ActivityId>("hub");
 
@@ -123,6 +142,7 @@ export function ActivitiesPage() {
         </button>
         {active === "pairwise-duel" ? <DuelActivity /> : null}
         {active === "purchase-validator" ? <PurchaseValidatorActivity /> : null}
+        {active === "smart-wishlist" ? <SmartWishlistActivity /> : null}
         {active === "what-to-play" ? <WhatToPlayActivity /> : null}
         {active === "play-calendar" ? <PlayCalendarActivity /> : null}
         {active === "shelf-of-shame" ? <ShelfOfShameActivity /> : null}

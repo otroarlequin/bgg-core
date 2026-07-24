@@ -808,6 +808,7 @@ describe("activities registry", () => {
     const { listActivities } = await import("../src/activities/registry.js");
     const ids = listActivities().map((a) => a.id);
     expect(ids).toContain("pairwise-duel");
+    expect(ids).toContain("smart-wishlist");
   });
 });
 
@@ -1132,5 +1133,383 @@ describe("shelf of shame / what-to-play / calendar", () => {
     const day = queries.queryPlaysOnDate("2026-07-21");
     expect(day).toHaveLength(1);
     expect(day[0].quantity).toBe(2);
+  });
+});
+
+describe("smart wishlist", () => {
+  function entry(
+    partial: Partial<CollectionEntry> &
+      Pick<CollectionEntry, "collId" | "bggId" | "name">,
+  ): CollectionEntry {
+    return {
+      subtype: "boardgame",
+      yearPublished: 2020,
+      imageUrl: null,
+      thumbnailUrl: null,
+      own: false,
+      prevOwned: false,
+      forTrade: false,
+      want: false,
+      wantToPlay: false,
+      wantToBuy: false,
+      wishlist: false,
+      preordered: false,
+      hasParts: false,
+      wantParts: false,
+      personalRating: null,
+      comment: null,
+      wishlistPriority: null,
+      numPlays: 0,
+      bggRating: null,
+      bggRank: null,
+      lastModified: null,
+      syncedAt: new Date().toISOString(),
+      ...partial,
+    };
+  }
+
+  it("ranks wishlist by fit/gap and exposes profile reasons", () => {
+    const { storage, queries } = createTestContext();
+    const now = new Date().toISOString();
+
+    seedCollection(storage, [
+      entry({
+        collId: 1,
+        bggId: 1,
+        name: "Owned Rosenberg A",
+        own: true,
+        personalRating: 9,
+        numPlays: 12,
+      }),
+      entry({
+        collId: 2,
+        bggId: 2,
+        name: "Owned Rosenberg B",
+        own: true,
+        personalRating: 8,
+        numPlays: 6,
+      }),
+      entry({
+        collId: 3,
+        bggId: 10,
+        name: "Wishlist Fit",
+        wishlist: true,
+        wishlistPriority: 1,
+      }),
+      entry({
+        collId: 4,
+        bggId: 20,
+        name: "Wishlist Mismatch",
+        wishlist: true,
+        wishlistPriority: 5,
+      }),
+    ]);
+
+    storage.games.upsertGame(storage.db, {
+      bggId: 1,
+      name: "Owned Rosenberg A",
+      yearPublished: 2016,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 90,
+      minPlayTime: 60,
+      maxPlayTime: 120,
+      weight: 3,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Uwe Rosenberg"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Worker Placement"],
+      categories: ["Economic"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 2,
+      name: "Owned Rosenberg B",
+      yearPublished: 2018,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 90,
+      minPlayTime: 60,
+      maxPlayTime: 120,
+      weight: 3.2,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Uwe Rosenberg"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Worker Placement", "Hand Management"],
+      categories: ["Economic"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 10,
+      name: "Wishlist Fit",
+      yearPublished: 2022,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 90,
+      minPlayTime: 60,
+      maxPlayTime: 120,
+      weight: 3,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Uwe Rosenberg"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Worker Placement"],
+      categories: ["Economic"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 20,
+      name: "Wishlist Mismatch",
+      yearPublished: 2010,
+      minPlayers: 2,
+      maxPlayers: 8,
+      playingTime: 30,
+      minPlayTime: 20,
+      maxPlayTime: 40,
+      weight: 1.2,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Someone Else"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Roll and Move"],
+      categories: ["Children's Game"],
+      languageDependence: null,
+      bggRating: 5,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+
+    const result = queries.querySmartWishlist({ mode: "balance" });
+    expect(result.profile.ownedCount).toBe(2);
+    expect(result.profile.topDesigners.some((d) => d.value === "Uwe Rosenberg")).toBe(
+      true,
+    );
+    expect(result.localSuggestions.length).toBe(2);
+    expect(result.localSuggestions[0]?.bggId).toBe(10);
+    expect(result.localSuggestions[0]!.score).toBeGreaterThan(
+      result.localSuggestions[1]!.score,
+    );
+    expect(
+      result.localSuggestions[0]!.reasons.some(
+        (r) => r.kind === "fit_designer" || r.kind === "priority",
+      ),
+    ).toBe(true);
+    expect(
+      result.localSuggestions.some((s) =>
+        s.reasons.some((r) => /juegas bastante/i.test(r.headline)),
+      ),
+    ).toBe(false);
+
+    const more = queries.querySmartWishlist({ mode: "more" });
+    const gaps = queries.querySmartWishlist({ mode: "gaps" });
+    expect(more.localSuggestions[0]?.bggId).toBe(10);
+    expect(gaps.localSuggestions.map((s) => s.bggId)).toContain(10);
+  });
+
+  it("does not claim you play Solo from unplayed owned tags alone", () => {
+    const { storage, queries } = createTestContext();
+    const now = new Date().toISOString();
+
+    seedCollection(storage, [
+      entry({
+        collId: 1,
+        bggId: 1,
+        name: "Shelf Solo Capable",
+        own: true,
+        personalRating: 8,
+        numPlays: 0,
+      }),
+      entry({
+        collId: 2,
+        bggId: 2,
+        name: "Played Worker",
+        own: true,
+        personalRating: 9,
+        numPlays: 10,
+      }),
+      entry({
+        collId: 3,
+        bggId: 30,
+        name: "Wishlist Solo Tag",
+        wishlist: true,
+        wishlistPriority: 2,
+      }),
+    ]);
+
+    storage.games.upsertGame(storage.db, {
+      bggId: 1,
+      name: "Shelf Solo Capable",
+      yearPublished: 2020,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 60,
+      minPlayTime: 45,
+      maxPlayTime: 90,
+      weight: 2.5,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Other"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Solo / Solitaire Game", "Hand Management"],
+      categories: ["Solo / Solitaire Game"],
+      languageDependence: null,
+      bggRating: 7,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 2,
+      name: "Played Worker",
+      yearPublished: 2018,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 90,
+      minPlayTime: 60,
+      maxPlayTime: 120,
+      weight: 3,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Uwe Rosenberg"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Worker Placement", "Solo / Solitaire Game"],
+      categories: ["Economic"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 30,
+      name: "Wishlist Solo Tag",
+      yearPublished: 2024,
+      minPlayers: 1,
+      maxPlayers: 1,
+      playingTime: 40,
+      minPlayTime: 30,
+      maxPlayTime: 45,
+      weight: 2,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Uwe Rosenberg"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Solo / Solitaire Game", "Worker Placement"],
+      categories: ["Economic"],
+      languageDependence: null,
+      bggRating: 7.5,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+
+    const result = queries.querySmartWishlist({ mode: "balance" });
+    const item = result.localSuggestions.find((s) => s.bggId === 30);
+    expect(item).toBeTruthy();
+    const soloHeadline = item!.reasons.find((r) =>
+      /solo|solitaire/i.test(r.headline),
+    );
+    expect(soloHeadline).toBeUndefined();
+    expect(
+      item!.reasons.some(
+        (r) =>
+          r.kind === "fit_designer" ||
+          r.kind === "fit_mechanic" ||
+          r.kind === "priority",
+      ),
+    ).toBe(true);
+    expect(
+      item!.reasons.some((r) => /juegas bastante/i.test(r.headline)),
+    ).toBe(false);
+  });
+
+  it("scores discovery candidates with discovery_seed reason via attach", async () => {
+    const { storage, db, queries } = createTestContext();
+    const now = new Date().toISOString();
+    seedCollection(storage, [
+      entry({
+        collId: 1,
+        bggId: 1,
+        name: "Owned",
+        own: true,
+        personalRating: 9,
+        numPlays: 10,
+      }),
+    ]);
+    storage.games.upsertGame(storage.db, {
+      bggId: 1,
+      name: "Owned",
+      yearPublished: 2016,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 90,
+      minPlayTime: 60,
+      maxPlayTime: 120,
+      weight: 3,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Uwe Rosenberg"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Worker Placement"],
+      categories: ["Economic"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+
+    const base = queries.querySmartWishlist({ mode: "balance" });
+    const { attachDiscoverySuggestions } = await import(
+      "../src/query/smart-wishlist.js"
+    );
+    const withDisc = attachDiscoverySuggestions(
+      db,
+      base,
+      [
+        {
+          source: "discovery",
+          bggId: 99,
+          name: "New Rosenberg",
+          thumbnailUrl: null,
+          yearPublished: 2024,
+          subtype: "boardgame",
+          wishlistPriority: null,
+          designers: ["Uwe Rosenberg"],
+          mechanics: ["Worker Placement"],
+          categories: ["Economic"],
+          discoverySeed: "Uwe Rosenberg",
+        },
+      ],
+      { mode: "balance", discoveryLimit: 5 },
+    );
+    expect(withDisc.discoveryStatus.available).toBe(true);
+    expect(withDisc.discoverySuggestions[0]?.bggId).toBe(99);
+    expect(
+      withDisc.discoverySuggestions[0]?.reasons.some((r) => r.kind === "discovery_seed"),
+    ).toBe(true);
   });
 });

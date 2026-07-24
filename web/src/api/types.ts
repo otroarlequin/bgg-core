@@ -332,3 +332,80 @@ export interface PlayCalendarDayPlay {
   thumbnailUrl: string | null;
 }
 
+export type SmartWishlistMode = "balance" | "more" | "gaps";
+
+export type SmartWishlistReasonKind =
+  | "fit_mechanic"
+  | "fit_designer"
+  | "fit_category"
+  | "gap_mechanic"
+  | "gap_designer"
+  | "gap_category"
+  | "similar_loved"
+  | "fresh_vs_owned"
+  | "crowded_clone"
+  | "priority"
+  | "discovery_seed"
+  | "missing_data";
+
+export interface SmartWishlistReason {
+  kind: SmartWishlistReasonKind;
+  strength: "high" | "medium" | "low";
+  headline: string;
+  detail?: string;
+}
+
+export interface SmartWishlistGap {
+  facet: "mechanic" | "designer" | "category";
+  value: string;
+  kind: "strong" | "soft" | "saturated";
+  taste: number;
+  ownedCount: number;
+}
+
+export interface SmartWishlistFacetTaste {
+  facet: "mechanic" | "designer" | "category";
+  value: string;
+  taste: number;
+  rawTaste: number;
+  ownedCount: number;
+  totalPlays: number;
+}
+
+export interface SmartWishlistSuggestion {
+  source: "local" | "discovery";
+  bggId: number;
+  name: string;
+  thumbnailUrl: string | null;
+  yearPublished: number | null;
+  subtype: string | null;
+  wishlistPriority: number | null;
+  score: number;
+  breakdown: {
+    fit: number;
+    gap: number;
+    novelty: number;
+    priority: number;
+  };
+  reasons: SmartWishlistReason[];
+  discoverySeed?: string;
+}
+
+export interface SmartWishlistResult {
+  profile: {
+    topMechanics: SmartWishlistFacetTaste[];
+    topDesigners: SmartWishlistFacetTaste[];
+    topCategories: SmartWishlistFacetTaste[];
+    ownedCount: number;
+    playSignalCount: number;
+    summary: string;
+  };
+  gaps: SmartWishlistGap[];
+  localSuggestions: SmartWishlistSuggestion[];
+  discoverySuggestions: SmartWishlistSuggestion[];
+  discoveryStatus: {
+    available: boolean;
+    message?: string;
+  };
+}
+

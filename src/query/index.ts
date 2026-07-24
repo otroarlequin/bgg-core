@@ -31,6 +31,10 @@ import {
   queryPlaysOnDate,
   type PlayCalendarParams,
 } from "./play-calendar.js";
+import {
+  querySmartWishlist,
+  type SmartWishlistParams,
+} from "./smart-wishlist.js";
 
 export interface QueryService {
   queryCollection(params?: QueryCollectionParams): ReturnType<typeof queryCollection>;
@@ -49,6 +53,9 @@ export interface QueryService {
     params?: PlayCalendarParams,
   ): ReturnType<typeof queryPlayCalendar>;
   queryPlaysOnDate(date: string): ReturnType<typeof queryPlaysOnDate>;
+  querySmartWishlist(
+    params?: SmartWishlistParams,
+  ): ReturnType<typeof querySmartWishlist>;
 }
 
 export function createQueryService(db: Db): QueryService {
@@ -63,6 +70,7 @@ export function createQueryService(db: Db): QueryService {
     queryWhatToPlay: (params) => queryWhatToPlay(db, params),
     queryPlayCalendar: (params) => queryPlayCalendar(db, params),
     queryPlaysOnDate: (date) => queryPlaysOnDate(db, date),
+    querySmartWishlist: (params) => querySmartWishlist(db, params),
   };
 }
 
@@ -74,12 +82,14 @@ export type {
   ShelfOfShameParams,
   WhatToPlayParams,
   PlayCalendarParams,
+  SmartWishlistParams,
 };
 export { queryCollection, queryCollectionFacets, queryGamesPlayedInPeriod, queryPlays, queryPlayStats };
 export { queryDashboardSummary, queryCollectionSummary, queryTopPlayedGames };
 export { queryShelfOfShame } from "./shelf-of-shame.js";
 export { queryWhatToPlay } from "./what-to-play.js";
 export { queryPlayCalendar, queryPlaysOnDate } from "./play-calendar.js";
+export { querySmartWishlist } from "./smart-wishlist.js";
 export type { DashboardSummary, CollectionSummary, PlaysSummary, TopGameSummary } from "./summary.js";
 export type { ShelfOfShameItem } from "./shelf-of-shame.js";
 export type { WhatToPlaySuggestion, WhatToPlayResult } from "./what-to-play.js";
@@ -88,3 +98,10 @@ export type {
   PlayCalendarDay,
   PlayCalendarDayPlay,
 } from "./play-calendar.js";
+export type {
+  SmartWishlistResult,
+  SmartWishlistSuggestion,
+  SmartWishlistMode,
+  Reason,
+  GapEntry,
+} from "./smart-wishlist.js";

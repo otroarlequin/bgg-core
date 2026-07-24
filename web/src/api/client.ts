@@ -15,6 +15,8 @@ import type {
   WhatToPlaySuggestion,
   PlayCalendarResult,
   PlayCalendarDayPlay,
+  SmartWishlistResult,
+  SmartWishlistMode,
 } from "./types";
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -155,4 +157,13 @@ export function fetchPlayCalendarDay(
   date: string,
 ): Promise<{ date: string; total: number; items: PlayCalendarDayPlay[] }> {
   return fetchJson(`/api/activities/play-calendar/day${toQuery({ date })}`);
+}
+
+export function fetchSmartWishlist(params: {
+  mode?: SmartWishlistMode;
+  includeWantToPlay?: boolean;
+  includeExpansions?: boolean;
+  includeDiscovery?: boolean;
+} = {}): Promise<SmartWishlistResult> {
+  return fetchJson(`/api/activities/smart-wishlist${toQuery(params)}`);
 }
