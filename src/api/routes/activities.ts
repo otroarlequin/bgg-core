@@ -62,19 +62,22 @@ activitiesRoutes.post("/what-to-play", async (c) => {
     maxWeight?: number;
     ownedOnly?: boolean;
     includeExpansions?: boolean;
+    categories?: string | string[];
+    mechanics?: string | string[];
+    languageDependence?: string;
     count?: number;
     seed?: number;
   };
   const players = Number(body.players);
   const maxTimeMinutes = Number(body.maxTimeMinutes);
-  if (!Number.isFinite(players) || players < 1) {
-    return c.json({ message: "players debe ser un número >= 1" }, 400);
+  if (!Number.isFinite(players) || players < 1 || players > 30) {
+    return c.json({ message: "players debe ser un número entre 1 y 30" }, 400);
   }
   if (!Number.isFinite(maxTimeMinutes) || maxTimeMinutes < 1) {
     return c.json({ message: "maxTimeMinutes debe ser un número >= 1" }, 400);
   }
   const ctx = getActivityContext();
-  const suggestions = ctx.queries.queryWhatToPlay({
+  const result = ctx.queries.queryWhatToPlay({
     players,
     maxTimeMinutes,
     maxWeight:
@@ -83,10 +86,17 @@ activitiesRoutes.post("/what-to-play", async (c) => {
         : undefined,
     ownedOnly: body.ownedOnly,
     includeExpansions: body.includeExpansions,
+    categories: body.categories as string[] | undefined,
+    mechanics: body.mechanics as string[] | undefined,
+    languageDependence: body.languageDependence?.trim() || undefined,
     count: body.count,
     seed: body.seed,
   });
-  return c.json({ total: suggestions.length, suggestions });
+  return c.json({
+    total: result.suggestions.length,
+    poolTotal: result.poolTotal,
+    suggestions: result.suggestions,
+  });
 });
 
 activitiesRoutes.get("/play-calendar", (c) => {

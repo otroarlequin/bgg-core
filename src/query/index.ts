@@ -82,7 +82,7 @@ export { queryWhatToPlay } from "./what-to-play.js";
 export { queryPlayCalendar, queryPlaysOnDate } from "./play-calendar.js";
 export type { DashboardSummary, CollectionSummary, PlaysSummary, TopGameSummary } from "./summary.js";
 export type { ShelfOfShameItem } from "./shelf-of-shame.js";
-export type { WhatToPlaySuggestion } from "./what-to-play.js";
+export type { WhatToPlaySuggestion, WhatToPlayResult } from "./what-to-play.js";
 export type {
   PlayCalendarResult,
   PlayCalendarDay,

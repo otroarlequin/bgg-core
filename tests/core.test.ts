@@ -1017,8 +1017,52 @@ describe("shelf of shame / what-to-play / calendar", () => {
       maxTimeMinutes: 90,
       seed: 1,
     });
-    expect(suggestions.some((s) => s.bggId === 10)).toBe(true);
-    expect(suggestions.some((s) => s.bggId === 20)).toBe(false);
+    expect(suggestions.suggestions.some((s) => s.bggId === 10)).toBe(true);
+    expect(suggestions.suggestions.some((s) => s.bggId === 20)).toBe(false);
+
+    storage.games.upsertGame(storage.db, {
+      bggId: 10,
+      name: "Short Fit",
+      yearPublished: 2020,
+      minPlayers: 2,
+      maxPlayers: 4,
+      playingTime: 45,
+      minPlayTime: 30,
+      maxPlayTime: 60,
+      weight: 2,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: [],
+      artists: [],
+      publishers: [],
+      mechanics: ["Hand Management"],
+      categories: ["Strategy"],
+      languageDependence: "No necessary in-game text",
+      bggRating: 7.5,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+
+    const byTaxonomy = queries.queryWhatToPlay({
+      players: 3,
+      maxTimeMinutes: 90,
+      categories: ["Strategy"],
+      mechanics: ["Hand Management"],
+      languageDependence: "No necessary in-game text",
+      seed: 1,
+    });
+    expect(byTaxonomy.poolTotal).toBeGreaterThanOrEqual(1);
+    expect(byTaxonomy.suggestions.some((s) => s.bggId === 10)).toBe(true);
+
+    const missTaxonomy = queries.queryWhatToPlay({
+      players: 3,
+      maxTimeMinutes: 90,
+      categories: ["Children"],
+      seed: 1,
+    });
+    expect(missTaxonomy.suggestions.some((s) => s.bggId === 10)).toBe(false);
+    expect(missTaxonomy.poolTotal).toBe(0);
   });
 
   it("computes play calendar streaks", () => {

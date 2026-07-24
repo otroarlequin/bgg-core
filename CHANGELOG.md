@@ -19,6 +19,9 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 ### Changed
 - Validador y Partidas: lista de cards en móvil (`md:` tabla); chips/botones con área táctil mayor en móvil.
 - Hub de Actividades: entradas para las tres actividades nuevas.
+- **Qué jugar esta noche:** jugadores con rango de facets (hasta 30) + slider; filtros de categorías, mecánicas y dependencia del idioma (mismo patrón que duel/colección); el pool de sugerencias respeta esos filtros (`poolTotal` en la UI).
+- Calendario / rachas: layout horizontal sin scroll H, presets de periodo (1/3/6/12 meses), separadores mes/año, detalle de partida expandible.
+- `TASKS.md` actualizado con backlog priorizado y trabajo reciente.
 
 ## [0.1.1] — 2026-07-23
 

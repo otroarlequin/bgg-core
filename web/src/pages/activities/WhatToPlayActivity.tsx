@@ -1,7 +1,28 @@
-import { useState } from "react";
-import { postWhatToPlay } from "../../api/client";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchCollectionFacets, postWhatToPlay } from "../../api/client";
 import type { WhatToPlaySuggestion } from "../../api/types";
+import { BGG_LANGUAGE_DEPENDENCE_LEVELS } from "../../constants/language-dependence";
+import { CollapsiblePanel } from "../../components/CollapsiblePanel";
+import {
+  FilterSelect,
+  MultiFilterSelect,
+} from "../../components/FilterField";
 import { GameCard } from "../../components/GameCard";
+
+const PLAYERS_MAX_CAP = 30;
+
+function filtersSummary(opts: {
+  categories: string[];
+  mechanics: string[];
+  languageDependence?: string;
+}): string {
+  const bits: string[] = [];
+  if (opts.languageDependence) bits.push("idioma");
+  if (opts.categories.length) bits.push(`${opts.categories.length} cat.`);
+  if (opts.mechanics.length) bits.push(`${opts.mechanics.length} mec.`);
+  return bits.length > 0 ? bits.join(" · ") : "Sin filtros de taxonomía";
+}
 
 export function WhatToPlayActivity() {
   const [players, setPlayers] = useState(2);
@@ -9,10 +30,51 @@ export function WhatToPlayActivity() {
   const [maxWeight, setMaxWeight] = useState("");
   const [ownedOnly, setOwnedOnly] = useState(true);
   const [includeExpansions, setIncludeExpansions] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [mechanics, setMechanics] = useState<string[]>([]);
+  const [languageDependence, setLanguageDependence] = useState<
+    string | undefined
+  >();
   const [suggestions, setSuggestions] = useState<WhatToPlaySuggestion[]>([]);
+  const [poolTotal, setPoolTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+
+  const { data: facets } = useQuery({
+    queryKey: ["what-to-play-facets", ownedOnly, includeExpansions],
+    queryFn: () =>
+      fetchCollectionFacets({
+        own: ownedOnly ? true : undefined,
+        includeExpansions,
+      }),
+  });
+
+  const options = useMemo(
+    () =>
+      facets ?? {
+        designers: [],
+        artists: [],
+        publishers: [],
+        categories: [],
+        mechanics: [],
+        languageDependence: [...BGG_LANGUAGE_DEPENDENCE_LEVELS],
+        playersMin: 1,
+        playersMax: 12,
+      },
+    [facets],
+  );
+
+  const playersMax = Math.min(
+    Math.max(options.playersMax, 12),
+    PLAYERS_MAX_CAP,
+  );
+  const playersMin = Math.max(1, options.playersMin || 1);
+
+  useEffect(() => {
+    if (players > playersMax) setPlayers(playersMax);
+    if (players < playersMin) setPlayers(playersMin);
+  }, [players, playersMax, playersMin]);
 
   async function loadSuggestions(reshuffle = false) {
     setLoading(true);
@@ -28,10 +90,14 @@ export function WhatToPlayActivity() {
             : undefined,
         ownedOnly,
         includeExpansions,
+        categories: categories.length > 0 ? categories : undefined,
+        mechanics: mechanics.length > 0 ? mechanics : undefined,
+        languageDependence,
         count: 5,
         seed: reshuffle ? Date.now() : undefined,
       });
       setSuggestions(result.suggestions);
+      setPoolTotal(result.poolTotal);
       setSearched(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al sugerir");
@@ -45,20 +111,33 @@ export function WhatToPlayActivity() {
       <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
         <h2 className="text-lg font-semibold text-ink">Qué jugar esta noche</h2>
         <p className="mt-1 text-sm text-muted">
-          Filtra por mesa y tiempo; te proponemos 3–5 opciones con un score
-          simple.
+          Filtra por mesa, tiempo y taxonomía; te proponemos 3–5 opciones con un
+          score simple.
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="text-sm">
-            <span className="mb-1 block text-muted">Jugadores</span>
+            <span className="mb-1 block text-muted">
+              Jugadores ({playersMin}–{playersMax})
+            </span>
             <input
               type="number"
-              min={1}
-              max={20}
+              min={playersMin}
+              max={playersMax}
               value={players}
-              onChange={(e) => setPlayers(Number(e.target.value) || 1)}
+              onChange={(e) => {
+                const n = Number(e.target.value) || playersMin;
+                setPlayers(Math.min(playersMax, Math.max(playersMin, n)));
+              }}
               className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 md:py-2"
+            />
+            <input
+              type="range"
+              min={playersMin}
+              max={playersMax}
+              value={Math.min(playersMax, Math.max(playersMin, players))}
+              onChange={(e) => setPlayers(Number(e.target.value))}
+              className="mt-2 w-full accent-[var(--color-accent)]"
             />
           </label>
           <label className="text-sm">
@@ -108,6 +187,44 @@ export function WhatToPlayActivity() {
           </div>
         </div>
 
+        <div className="mt-4">
+          <CollapsiblePanel
+            title="Categorías, mecánicas e idioma"
+            defaultOpen={false}
+            summary={filtersSummary({
+              categories,
+              mechanics,
+              languageDependence,
+            })}
+          >
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FilterSelect
+                  label="Dependencia del idioma"
+                  options={options.languageDependence}
+                  value={languageDependence}
+                  placeholder="Todas"
+                  onChange={setLanguageDependence}
+                />
+              </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <MultiFilterSelect
+                  label="Categorías"
+                  options={options.categories}
+                  values={categories}
+                  onChange={setCategories}
+                />
+                <MultiFilterSelect
+                  label="Mecánicas"
+                  options={options.mechanics}
+                  values={mechanics}
+                  onChange={setMechanics}
+                />
+              </div>
+            </div>
+          </CollapsiblePanel>
+        </div>
+
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
@@ -138,7 +255,15 @@ export function WhatToPlayActivity() {
 
       {searched && !loading && suggestions.length === 0 ? (
         <p className="rounded-xl border border-border bg-surface-raised/40 p-4 text-sm text-muted">
-          Ningún juego encaja con estos filtros. Prueba más tiempo o menos peso.
+          Ningún juego encaja con estos filtros. Prueba más tiempo, menos peso o
+          menos taxonomía.
+        </p>
+      ) : null}
+
+      {searched && poolTotal != null && suggestions.length > 0 ? (
+        <p className="text-sm text-muted">
+          Pool filtrado: <span className="font-medium text-ink">{poolTotal}</span>{" "}
+          juego{poolTotal === 1 ? "" : "s"} · mostrando {suggestions.length}
         </p>
       ) : null}
 

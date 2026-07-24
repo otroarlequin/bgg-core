@@ -8,6 +8,9 @@ export interface WhatToPlayParams {
   maxWeight?: number;
   ownedOnly?: boolean;
   includeExpansions?: boolean;
+  categories?: string | string[];
+  mechanics?: string | string[];
+  languageDependence?: string;
   count?: number;
   /** Stable-ish reshuffle seed (e.g. timestamp). */
   seed?: number;
@@ -44,6 +47,19 @@ function parseJsonArray(value: string | null): string[] {
   }
 }
 
+/** Accept string | string[] from JSON clients that unwrap single-item arrays. */
+function normalizeStringList(value: unknown): string[] {
+  if (value == null) return [];
+  const raw = Array.isArray(value) ? value : [value];
+  const out: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const trimmed = item.trim();
+    if (trimmed && !out.includes(trimmed)) out.push(trimmed);
+  }
+  return out;
+}
+
 function mulberry32(seed: number): () => number {
   let t = seed >>> 0;
   return () => {
@@ -74,15 +90,24 @@ function effectiveTime(row: {
   return null;
 }
 
+export interface WhatToPlayResult {
+  poolTotal: number;
+  suggestions: WhatToPlaySuggestion[];
+}
+
 /**
  * Suggest 3–5 games that fit players/time/(optional) weight with a simple score.
+ * Taxonomy filters (categories / mechanics / language) shrink the candidate pool.
  */
 export function queryWhatToPlay(
   db: Db,
   params: WhatToPlayParams,
-): WhatToPlaySuggestion[] {
+): WhatToPlayResult {
   const count = Math.min(Math.max(params.count ?? 5, 3), 8);
   const ownedOnly = params.ownedOnly !== false;
+  const categories = normalizeStringList(params.categories);
+  const mechanics = normalizeStringList(params.mechanics);
+  const languageDependence = params.languageDependence?.trim() || undefined;
   const conditions = ["1=1"];
   const values: unknown[] = [];
 
@@ -92,6 +117,13 @@ export function queryWhatToPlay(
   if (params.includeExpansions !== true) {
     conditions.push("ce.subtype != 'boardgameexpansion'");
   }
+
+  // When filtering by thing metadata, require a synced games row.
+  const needsGameRow =
+    languageDependence != null ||
+    categories.length > 0 ||
+    mechanics.length > 0 ||
+    params.maxWeight !== undefined;
 
   conditions.push("(g.min_players IS NULL OR g.min_players <= ?)");
   values.push(params.players);
@@ -106,9 +138,32 @@ export function queryWhatToPlay(
   values.push(params.maxTimeMinutes);
 
   if (params.maxWeight !== undefined) {
-    conditions.push("(g.weight IS NULL OR g.weight <= ?)");
+    conditions.push("g.weight IS NOT NULL AND g.weight <= ?");
     values.push(params.maxWeight);
   }
+
+  if (languageDependence) {
+    conditions.push("g.language_dependence = ?");
+    values.push(languageDependence);
+  }
+
+  for (const cat of categories) {
+    conditions.push(`EXISTS (
+      SELECT 1 FROM json_each(COALESCE(g.categories, '[]')) je
+      WHERE je.value = ? COLLATE NOCASE
+    )`);
+    values.push(cat);
+  }
+
+  for (const mech of mechanics) {
+    conditions.push(`EXISTS (
+      SELECT 1 FROM json_each(COALESCE(g.mechanics, '[]')) je
+      WHERE je.value = ? COLLATE NOCASE
+    )`);
+    values.push(mech);
+  }
+
+  const joinType = needsGameRow ? "INNER JOIN" : "LEFT JOIN";
 
   const rows = db
     .prepare(
@@ -133,7 +188,7 @@ export function queryWhatToPlay(
            SELECT MAX(p.date) FROM plays p WHERE p.bgg_id = ce.bgg_id
          ) AS last_play_date
        FROM collection_entries ce
-       LEFT JOIN games g ON g.bgg_id = ce.bgg_id
+       ${joinType} games g ON g.bgg_id = ce.bgg_id
        WHERE ${conditions.join(" AND ")}`,
     )
     .all(...(values as Array<string | number>)) as Array<{
@@ -268,5 +323,8 @@ export function queryWhatToPlay(
     return 0; // preserve shuffle order within bucket
   });
 
-  return topBand.slice(0, count);
+  return {
+    poolTotal: scored.length,
+    suggestions: topBand.slice(0, count),
+  };
 }

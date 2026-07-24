@@ -127,9 +127,16 @@ export function postWhatToPlay(body: {
   maxWeight?: number;
   ownedOnly?: boolean;
   includeExpansions?: boolean;
+  categories?: string[];
+  mechanics?: string[];
+  languageDependence?: string;
   count?: number;
   seed?: number;
-}): Promise<{ total: number; suggestions: WhatToPlaySuggestion[] }> {
+}): Promise<{
+  total: number;
+  poolTotal: number;
+  suggestions: WhatToPlaySuggestion[];
+}> {
   return fetchJson("/api/activities/what-to-play", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
