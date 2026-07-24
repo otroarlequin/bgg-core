@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install API deps
+        run: npm ci
+      - name: Install web deps
+        run: npm ci --prefix web
+      - name: Test
+        run: npm test
+      - name: Build API
+        run: npm run build
+      - name: Build web
+        run: npm run build:web
