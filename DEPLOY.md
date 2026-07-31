@@ -2,7 +2,12 @@
 
 La app corre como un solo servicio: API Hono + UI estática (`web/dist`) + SQLite en un volumen.
 
-Sync con BGG se hace **en tu PC**; luego subes `data/bgg.db` al volumen.
+Comandos de operación (sync, reconcile, arranque): ver también [docs/COMMANDS.md](./docs/COMMANDS.md) y la pestaña **Comandos** en la UI.
+
+Hay **dos capas** de sincronización (on-demand, no continua):
+
+1. **Sync BGG** — botón en la UI o `POST /api/sync`: refresca colección/partidas desde BoardGameGeek **in-place** en la instancia donde estés (local o Fly). No toca duels/reviews.
+2. **Reconcile local ↔ Fly** — CLI (`db:status` / `db:pull` / `db:push`): alinea las dos SQLite cuando lo pidas (p. ej. al volver a casa tras usar Fly).
 
 ## Requisitos
 
@@ -19,20 +24,14 @@ fly auth login
 fly apps create bgg-core
 fly volumes create bgg_data --region lax --size 1
 fly secrets set APP_PASSWORD="tu-clave-compartida"
+fly secrets set BGG_TOKEN="tu-token"
+fly secrets set BGG_USERNAME="tu-usuario-bgg"
 fly deploy
 ```
 
 Si el nombre `bgg-core` está ocupado, cambia `app` en [`fly.toml`](./fly.toml) y vuelve a crear la app.
 
-**Importante:** no uses el wizard de “Launch” de la UI si falla detectando el runtime. El repo ya trae `Dockerfile` + `fly.toml`; despliega desde la CLI:
-
-```bash
-fly auth login
-fly apps create bgg-core --org personal   # o el org que uses
-fly volumes create bgg_data --region lax --size 1
-fly secrets set APP_PASSWORD="tu-clave-compartida"
-fly deploy
-```
+**Importante:** no uses el wizard de “Launch” de la UI si falla detectando el runtime. El repo ya trae `Dockerfile` + `fly.toml`; despliega desde la CLI.
 
 Abre: `https://bgg-core.fly.dev` (o la URL que muestre `fly status`).  
 El navegador pedirá usuario/contraseña: el **usuario puede ser cualquiera**; importa la contraseña (`APP_PASSWORD`).
@@ -43,43 +42,72 @@ El navegador pedirá usuario/contraseña: el **usuario puede ser cualquiera**; i
 fly deploy
 ```
 
-## Actualizar la base de datos (tras sync local)
+## Sync BGG (colección / partidas)
 
-En tu máquina:
+Preferido en Fly y en local: botón **Sincronizar con BGG** en el header, o:
+
+```http
+POST /api/sync
+Content-Type: application/json
+
+{ "collection": true, "plays": true }
+```
+
+Requiere `BGG_TOKEN` + `BGG_USERNAME` en el servidor. Escribe solo tablas BGG (upsert); **nunca** reemplaza el archivo `.db` ni toca `duel_*` / `purchase_reviews`.
+
+CLI local (equivalente):
 
 ```bash
 npm run sync:collection
-npm run sync:things
 npm run sync:plays
+npm run sync:things   # metadatos; no está en el botón
 ```
 
-Sube el archivo **preservando** datos de app en Fly (`duel_sessions`, `duel_rounds`, `purchase_reviews`):
+## Reconcile local ↔ Fly (datos de app)
+
+Los duels y purchase reviews **no** se pueden recuperar desde BGG. Usa estos comandos on-demand:
 
 ```bash
-npm run db:upload
+npm run db:status    # reporte de discrepancias (no escribe)
+npm run db:pull      # Fly → local (backup en data/backups/)
+npm run db:push      # local → Fly (union + asserts; fail-closed)
 ```
 
-El script descarga el `.db` remoto, fusiona esas tablas en tu sync local, hace `rm` + `sftp put` y reinicia la app. Si no hay DB remota, solo sube la local.
+`npm run db:upload` es un **alias deprecado** de `db:push`.
+
+### Flujo al volver a casa
+
+1. `npm run db:status` — ver si Fly tiene duels/reviews nuevos.
+2. `npm run db:pull` — bajar datos de app a local.
+3. Opcional: sync BGG en local si collection/plays remotos estaban adelante.
+4. Si local tiene app data que Fly no: `db:status` → `db:push`.
+
+### Política de merge
+
+- Unión por clave estable; **nunca** borra filas de app en silencio.
+- Conflicto (misma clave, distinto contenido): conserva **ambas** y loguea `CONFLICT kept both`.
+- `--fail-on-conflict` aborta si hay conflictos.
+- Push **exige** download remoto (o `--old <path>`). Si falla el download → **no sube** (salvo `--i-know-this-can-wipe-app-data`, peligroso).
+- Tras el merge, asserts de counts; si fallan → aborta sin tocar Fly.
 
 Opciones útiles:
 
 ```bash
-npm run db:upload -- --local-only --old ./tmp/remote.db   # merge sin subir
-npm run db:upload -- --skip-download --old ./tmp/remote.db
-npm run db:upload -- --app bgg-core --new ./data/bgg.db
+npm run db:push -- --local-only --old ./tmp/remote.db --out ./data/bgg-merged.db
+npm run db:push -- --skip-download --old ./tmp/remote.db
+npm run db:status -- --app bgg-core --local ./data/bgg.db
 ```
 
 La máquina debe estar encendida (abre la URL o `fly machine start`).
 
-Upload manual (sin merge; **pierdes** duel/reviews de prod):
+### Upload manual (evitar)
 
 ```bash
+# PELIGRO: sin merge; puedes perder duel/reviews de prod
 fly ssh console -a bgg-core -C "rm -f /data/bgg.db /data/bgg.db-wal /data/bgg.db-shm"
 fly ssh sftp put ./data/bgg.db /data/bgg.db
 fly apps restart bgg-core
 ```
-
-El sync local sigue siendo la fuente de verdad de colección/partidas.
 
 ## Healthcheck
 
@@ -90,17 +118,15 @@ El sync local sigue siendo la fuente de verdad de colección/partidas.
 | Variable | Uso |
 |----------|-----|
 | `APP_PASSWORD` | Basic Auth compartida (secret) |
-| `BGG_TOKEN` | Secret: búsqueda/thing en el validador de compras |
-| `BGG_USERNAME` | Opcional en Fly (solo sync local) |
+| `BGG_TOKEN` | Secret: validador, hotness scout, **sync BGG** |
+| `BGG_USERNAME` | Secret: **requerido** para sync de colección/partidas en Fly |
 | `BGG_DB_PATH` | Default `/data/bgg.db` |
 | `WEB_ROOT` | Default `/app/web/dist` |
 
-Para el validador en producción:
-
 ```bash
-fly secrets set BGG_TOKEN="tu-token" -a bgg-core
+fly secrets set BGG_TOKEN="tu-token" BGG_USERNAME="tu-usuario" -a bgg-core
 ```
 
 ## Coste / sleep
 
-Con `min_machines_running = 0` la máquina puede apagarse en idle (cold start de unos segundos al entrar desde el celular).
+Con `min_machines_running = 0` la máquina puede apagarse en idle (cold start de unos segundos al entrar desde el celular). El sync BGG y el reconcile son **on-demand** a propósito (no hay sync continuo).

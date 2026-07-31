@@ -10,21 +10,28 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 ### Added
 - Health enriquecido en `/api/health`: `dbOk`, `dbPath`, `collectionCount`, `playsCount`, `ts` (sin auth).
 - CI GitHub Actions (Node 22): `npm test`, `build`, `build:web`.
-- `npm run db:upload` (`scripts/upload-db.ts`): merge de `duel_sessions` / `duel_rounds` / `purchase_reviews` desde la DB remota antes de subir a Fly; documentado en `DEPLOY.md`.
+- **Sync BGG on-demand:** `POST /api/sync` (colección + partidas incremental, lock, in-place) + botón “Sincronizar con BGG” en el header.
+- **Reconcile local ↔ Fly:** `npm run db:status` / `db:pull` / `db:push` con unión de tablas de app, reporte de discrepancias, fail-closed y asserts anti-pérdida; `db:upload` queda como alias deprecado.
 - Actividad **Shelf of shame**: owned sin partidas, orden antiguos primero (`/api/activities/shelf-of-shame` + UI).
 - Actividad **Qué jugar esta noche**: filtros jugadores/tiempo/peso + sugerencias con score y reshuffle (`/api/activities/what-to-play` + UI).
 - Actividad **Calendario / rachas**: heatmap del último año, rachas y detalle por día (`/api/activities/play-calendar` + UI).
-- Actividad **Wishlist inteligente**: perfil de mesa + gaps, ranking de wishlist/want-to-play con razones tipadas, modos Equilibrio / Más de lo mismo / Cubre huecos, y discovery BGG acotado por diseñadores (`/api/activities/smart-wishlist` + UI).
+- Actividad **Wishlist inteligente**: perfil de mesa + gaps, ranking de wishlist/want-to-play con razones tipadas, modos Equilibrio / Más de lo mismo / Cubre huecos (`/api/activities/smart-wishlist` + UI).
+- Actividad **Hotness scout**: hot list de BGG puntuada contra el perfil owned (excluye owned; marca wishlist/preordered), API + UI (`/api/activities/hotness-scout`).
+- Pestaña **Comandos** en la UI + [`docs/COMMANDS.md`](./docs/COMMANDS.md) en GitHub (sync BGG, reconcile local↔Fly, deploy).
 - `TASKS.md` con backlog (export/compartir, wishlist inteligente, auth cookie) y descartados.
 
 ### Changed
+- `DEPLOY.md`: sync BGG en Fly (requiere `BGG_USERNAME`), reconcile bidireccional, y advertencias contra wipe de datos de app.
 - Validador y Partidas: lista de cards en móvil (`md:` tabla); chips/botones con área táctil mayor en móvil.
-- Hub de Actividades: entradas para las actividades nuevas (incl. wishlist inteligente).
+- Hub de Actividades: entradas para las actividades nuevas (incl. wishlist inteligente y Hotness scout).
 - **Qué jugar esta noche:** jugadores con rango de facets (hasta 30) + slider; filtros de categorías, mecánicas y dependencia del idioma (mismo patrón que duel/colección); el pool de sugerencias respeta esos filtros (`poolTotal` en la UI).
 - Calendario / rachas: layout horizontal sin scroll H, presets de periodo (1/3/6/12 meses), separadores mes/año, detalle de partida expandible.
 - `TASKS.md` actualizado con backlog priorizado y trabajo reciente.
 - **Export / compartir (v1):** descarga PNG + copiar texto para ganador del duel y tops del resumen (presencial/virtual).
 - **Wishlist inteligente:** copy de fit más honesto (colección vs partidas); owned sin partidas pesan poco; tags de capacidad BGG (p. ej. Solo/Solitaire) con peso bajo y sin headline engañoso.
+- **Wishlist inteligente:** solo priorización local (sin llamadas BGG); discovery movido a Hotness scout; UI sin sección de descubrimientos; modal del validador con card del juego.
+- **Wishlist inteligente UI:** sin summary duplicado; chips de huecos (mecánicas + diseñadores) como filtro OR; grid 2 cols; CTA validador con borde/icono; `coveredGaps` en sugerencias.
+- **Wishlist inteligente / huecos:** chips solo accionables vs wishlist; peso de diseñador repartido entre co-autores; fallback a afinidades presentes en wishlist (`tasteFacets`).
 
 ## [0.1.1] — 2026-07-23
 

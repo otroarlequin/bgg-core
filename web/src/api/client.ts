@@ -17,6 +17,8 @@ import type {
   PlayCalendarDayPlay,
   SmartWishlistResult,
   SmartWishlistMode,
+  HotnessScoutResult,
+  SyncApiResult,
 } from "./types";
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -163,7 +165,24 @@ export function fetchSmartWishlist(params: {
   mode?: SmartWishlistMode;
   includeWantToPlay?: boolean;
   includeExpansions?: boolean;
-  includeDiscovery?: boolean;
 } = {}): Promise<SmartWishlistResult> {
   return fetchJson(`/api/activities/smart-wishlist${toQuery(params)}`);
+}
+
+export function fetchHotnessScout(params: {
+  mode?: SmartWishlistMode;
+  includeExpansions?: boolean;
+} = {}): Promise<HotnessScoutResult> {
+  return fetchJson(`/api/activities/hotness-scout${toQuery(params)}`);
+}
+
+export function triggerSync(params: {
+  collection?: boolean;
+  plays?: boolean;
+} = {}): Promise<SyncApiResult> {
+  return fetchJson("/api/sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
 }

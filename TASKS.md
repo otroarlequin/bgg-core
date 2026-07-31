@@ -34,5 +34,8 @@ Backlog y decisiones de producto para bgg-core.
 - **Shelf of shame** — owned sin partidas, antiguos primero.
 - **Qué jugar esta noche** — score + reshuffle; filtros jugadores (rango amplio), tiempo, peso, categorías, mecánicas, idioma; pool filtrado real + indicador `poolTotal`.
 - **Calendario / rachas** — heatmap horizontal sin scroll H, etiquetas de mes, separadores mes/año, presets (1/3/6/12 meses), filtro de fechas, detalle de partida expandible en la misma vista.
-- **Wishlist inteligente** — perfil + gaps, ranking local con razones, modos, discovery BGG acotado (diseñadores) con degradación sin token.
+- **Wishlist inteligente** — perfil + gaps, ranking local con razones y modos (sin discovery de red).
+- **Hotness scout** — hot list BGG vs perfil owned; requiere `BGG_TOKEN`.
+- **Sync BGG on-demand** — botón + `POST /api/sync` (colección/partidas); no toca datos de app.
+- **Reconcile local ↔ Fly** — `db:status` / `db:pull` / `db:push` con union fail-closed.
 - **Export / compartir (v1)** — PNG + texto: ganador del duel; tops presencial/virtual del resumen.

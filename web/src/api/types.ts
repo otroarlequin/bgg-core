@@ -372,6 +372,11 @@ export interface SmartWishlistFacetTaste {
   totalPlays: number;
 }
 
+export interface SmartWishlistCoveredGap {
+  facet: "mechanic" | "designer" | "category";
+  value: string;
+}
+
 export interface SmartWishlistSuggestion {
   source: "local" | "discovery";
   bggId: number;
@@ -388,6 +393,8 @@ export interface SmartWishlistSuggestion {
     priority: number;
   };
   reasons: SmartWishlistReason[];
+  coveredGaps: SmartWishlistCoveredGap[];
+  tasteFacets: SmartWishlistCoveredGap[];
   discoverySeed?: string;
 }
 
@@ -407,5 +414,26 @@ export interface SmartWishlistResult {
     available: boolean;
     message?: string;
   };
+}
+
+export interface HotnessScoutResult {
+  status: {
+    ok: boolean;
+    message?: string;
+  };
+  mode: SmartWishlistMode;
+  hotRankTotal: number;
+  candidatesFetched: number;
+  alreadyOwnedSkipped: number;
+  suggestions: SmartWishlistSuggestion[];
+  profile: SmartWishlistResult["profile"];
+}
+
+export interface SyncApiResult {
+  ok: boolean;
+  message?: string;
+  collection?: { count: number; incremental: boolean };
+  plays?: { count: number; incremental: boolean };
+  durationMs: number;
 }
 

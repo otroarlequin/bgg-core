@@ -6,6 +6,10 @@ import {
   type PurchaseValidatorParams,
 } from "../../activities/purchase-validator/index.js";
 import {
+  runHotnessScout,
+  type HotnessScoutRunParams,
+} from "../../activities/hotness-scout/index.js";
+import {
   runSmartWishlist,
   type SmartWishlistRunParams,
 } from "../../activities/smart-wishlist/index.js";
@@ -132,10 +136,29 @@ activitiesRoutes.get("/smart-wishlist", async (c) => {
     mode,
     includeWantToPlay: c.req.query("includeWantToPlay") !== "false",
     includeExpansions: c.req.query("includeExpansions") === "true",
-    includeDiscovery: c.req.query("includeDiscovery") !== "false",
   };
   try {
     const result = await runSmartWishlist(params, getActivityContext());
+    return c.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ message }, 400);
+  }
+});
+
+activitiesRoutes.get("/hotness-scout", async (c) => {
+  const modeRaw = c.req.query("mode") ?? "balance";
+  const mode = (
+    modeRaw === "more" || modeRaw === "gaps" || modeRaw === "balance"
+      ? modeRaw
+      : "balance"
+  ) as SmartWishlistMode;
+  const params: HotnessScoutRunParams = {
+    mode,
+    includeExpansions: c.req.query("includeExpansions") === "true",
+  };
+  try {
+    const result = await runHotnessScout(params, getActivityContext());
     return c.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

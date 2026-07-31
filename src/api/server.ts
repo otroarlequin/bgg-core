@@ -11,6 +11,7 @@ import { playsRoutes } from "./routes/plays.js";
 import { activitiesRoutes } from "./routes/activities.js";
 import { bggRoutes } from "./routes/bgg.js";
 import { mediaRoutes } from "./routes/media.js";
+import { syncRoutes } from "./routes/sync.js";
 import { loadConfig } from "../config/index.js";
 import { getDb } from "./context.js";
 
@@ -76,6 +77,7 @@ app.route("/api/plays", playsRoutes);
 app.route("/api/activities", activitiesRoutes);
 app.route("/api/bgg", bggRoutes);
 app.route("/api/media", mediaRoutes);
+app.route("/api/sync", syncRoutes);
 
 if (serveWeb) {
   // serveStatic root is relative to cwd; rewrite absolute WEB_ROOT → relative.

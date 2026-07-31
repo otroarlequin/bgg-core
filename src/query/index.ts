@@ -104,4 +104,6 @@ export type {
   SmartWishlistMode,
   Reason,
   GapEntry,
+  CoveredGap,
 } from "./smart-wishlist.js";
+export { selectExposedGaps } from "./smart-wishlist.js";

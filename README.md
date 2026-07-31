@@ -1,6 +1,6 @@
 # bgg-core
 
-App local para sincronizar, explorar y analizar tu ludoteca de [BoardGameGeek](https://boardgamegeek.com): colección, partidas y actividades (duelo y validador de compras).
+App local para sincronizar, explorar y analizar tu ludoteca de [BoardGameGeek](https://boardgamegeek.com): colección, partidas y actividades (duelo, validador, wishlist, hotness, etc.).
 
 Stack: **TypeScript** · **SQLite** · **Hono** (API) · **React + Vite + Tailwind** (UI).
 
@@ -38,38 +38,37 @@ Abre [http://localhost:5173](http://localhost:5173). La UI habla con la API loca
 | **Resumen** | Totales de colección/partidas, H-Index, tops (presencial vs virtual) |
 | **Colección** | Filtros, ordenación y cards ricas (stats, créditos, Base/Exp, link BGG) |
 | **Partidas** | Historial filtrable por fechas, ganadores e incompletas |
-| **Actividades** | Duel ranking del periodo y validador de compras vs tu colección |
+| **Actividades** | Duel, validador, wishlist inteligente, hotness scout, etc. |
+| **Comandos** | Referencia de operación (sync BGG, reconcile local↔Fly, deploy) |
 
-### Scripts útiles
+Botón **Sincronizar con BGG** en el header: refresca colección + partidas (`POST /api/sync`).
 
-```bash
-npm run dev          # API + web
-npm run dev:api      # Solo API (puerto 3001)
-npm run dev:web      # Solo Vite (puerto 5173)
-npm run build:web    # Build de producción del frontend
-```
+## Comandos de operación
 
-## CLI
+Guía completa (arranque, sync BGG, reconcile, deploy, flags):
 
-La sincronización con BGG es por CLI (rate limits / tokens):
+→ **[docs/COMMANDS.md](./docs/COMMANDS.md)**
+
+Resumen rápido:
 
 ```bash
-npm run sync:collection      # Colección (--full para completa)
-npm run sync:things          # Metadatos /thing (--force para re-sync)
-npm run sync:plays           # Partidas (--full para completa)
-npm run query:collection     # Consulta local (--own --min-rating 8)
-npm run activity:duel        # Duel ranking por terminal
+# Sync BGG (también: botón en la UI / POST /api/sync)
+npm run sync:collection
+npm run sync:plays
+npm run sync:things
+
+# Reconcile local ↔ Fly (datos de app: duels, reviews)
+npm run db:status
+npm run db:pull
+npm run db:push
+
+# App local
+npm run dev
 npm test
+npm run build:all
 ```
 
-### Ejemplo duel ranking (CLI)
-
-```bash
-npm run activity:duel -- create --from 2026-01-01 --to 2026-06-30
-npm run activity:duel -- next
-npm run activity:duel -- choose --winner 12345
-npm run activity:duel -- result
-```
+Deploy y secrets Fly: **[DEPLOY.md](./DEPLOY.md)**.
 
 ## Arquitectura
 
@@ -77,16 +76,12 @@ npm run activity:duel -- result
 src/sync/        Ingesta BGG → SQLite
 src/query/       Consultas locales
 src/api/         REST local (Hono)
-src/activities/  Plugins (duel, validador de compras, …)
+src/activities/  Plugins (duel, validador, …)
+docs/            Guías de operación
 web/             UI React (paleta Cartón y tinta)
 ```
 
 Datos sensibles y locales (`*.db`, `.env`, `data/`) **no** van al repositorio (ver `.gitignore`).
-
-## Deploy (Fly.io)
-
-Para acceder desde el celular o compartir con amigos: ver [DEPLOY.md](./DEPLOY.md)  
-(API + UI + volumen SQLite, sync local y upload de `bgg.db`, contraseña compartida).
 
 ## Changelog
 

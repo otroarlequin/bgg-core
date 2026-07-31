@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { postPurchaseValidator } from "../../api/client";
 import type {
   BggSearchHit,
@@ -387,7 +387,13 @@ function CandidatePanel({
   );
 }
 
-export function PurchaseValidatorActivity() {
+export function PurchaseValidatorActivity({
+  initialBggId,
+  onConsumedInitialBggId,
+}: {
+  initialBggId?: number;
+  onConsumedInitialBggId?: () => void;
+} = {}) {
   const [step, setStep] = useState<Step>("input");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -404,6 +410,15 @@ export function PurchaseValidatorActivity() {
   const [decision, setDecision] = useState<PurchaseDecision>("sin_decision");
   const [wishlistPriority, setWishlistPriority] = useState(3);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialBggId == null) return;
+    setInput(String(initialBggId));
+    void analyzeBggId(initialBggId);
+    onConsumedInitialBggId?.();
+    // Intentionally only when a new seed arrives from another activity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialBggId]);
 
   async function analyzeBggId(bggId: number, options?: { keepStatus?: boolean }) {
     setLoading(true);

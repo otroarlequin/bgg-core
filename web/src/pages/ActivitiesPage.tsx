@@ -5,6 +5,7 @@ import { ShelfOfShameActivity } from "./activities/ShelfOfShameActivity";
 import { WhatToPlayActivity } from "./activities/WhatToPlayActivity";
 import { PlayCalendarActivity } from "./activities/PlayCalendarActivity";
 import { SmartWishlistActivity } from "./activities/SmartWishlistActivity";
+import { HotnessScoutActivity } from "./activities/HotnessScoutActivity";
 
 type ActivityId =
   | "hub"
@@ -13,7 +14,8 @@ type ActivityId =
   | "what-to-play"
   | "play-calendar"
   | "shelf-of-shame"
-  | "smart-wishlist";
+  | "smart-wishlist"
+  | "hotness-scout";
 
 const activities: Array<{
   id: Exclude<ActivityId, "hub">;
@@ -39,8 +41,15 @@ const activities: Array<{
     id: "smart-wishlist",
     title: "Wishlist inteligente",
     description:
-      "Prioriza tu wishlist según cómo juegas, señala huecos y sugiere descubrimientos acotados desde BGG.",
+      "Prioriza tu wishlist según cómo juegas y filtra por huecos de tu mesa.",
     Icon: WishlistIcon,
+  },
+  {
+    id: "hotness-scout",
+    title: "Hotness scout",
+    description:
+      "Compara la hot list de BGG con tu colección owned para ver qué tendencias encajan con tu mesa.",
+    Icon: HotnessIcon,
   },
   {
     id: "what-to-play",
@@ -127,8 +136,21 @@ function WishlistIcon() {
   );
 }
 
+function HotnessIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path
+        d="M12 3c1.5 3 1 5.5-.5 7.5C13 11 15 12.5 15 16a3 3 0 1 1-6 0c0-2.2 1.2-3.8 2.2-5C10.5 9.5 10 6.5 12 3z"
+        strokeLinejoin="round"
+      />
+      <path d="M9 18.5c.8 1 1.8 1.5 3 1.5s2.2-.5 3-1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ActivitiesPage() {
   const [active, setActive] = useState<ActivityId>("hub");
+  const [validatorBggId, setValidatorBggId] = useState<number | null>(null);
 
   if (active !== "hub") {
     return (
@@ -141,8 +163,28 @@ export function ActivitiesPage() {
           ← Actividades
         </button>
         {active === "pairwise-duel" ? <DuelActivity /> : null}
-        {active === "purchase-validator" ? <PurchaseValidatorActivity /> : null}
-        {active === "smart-wishlist" ? <SmartWishlistActivity /> : null}
+        {active === "purchase-validator" ? (
+          <PurchaseValidatorActivity
+            initialBggId={validatorBggId ?? undefined}
+            onConsumedInitialBggId={() => setValidatorBggId(null)}
+          />
+        ) : null}
+        {active === "smart-wishlist" ? (
+          <SmartWishlistActivity
+            onOpenValidator={(bggId) => {
+              setValidatorBggId(bggId);
+              setActive("purchase-validator");
+            }}
+          />
+        ) : null}
+        {active === "hotness-scout" ? (
+          <HotnessScoutActivity
+            onOpenValidator={(bggId) => {
+              setValidatorBggId(bggId);
+              setActive("purchase-validator");
+            }}
+          />
+        ) : null}
         {active === "what-to-play" ? <WhatToPlayActivity /> : null}
         {active === "play-calendar" ? <PlayCalendarActivity /> : null}
         {active === "shelf-of-shame" ? <ShelfOfShameActivity /> : null}

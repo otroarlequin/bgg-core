@@ -1318,11 +1318,223 @@ describe("smart wishlist", () => {
         s.reasons.some((r) => /juegas bastante/i.test(r.headline)),
       ),
     ).toBe(false);
+    expect(Array.isArray(result.localSuggestions[0]?.coveredGaps)).toBe(true);
+    expect(
+      result.gaps.every(
+        (g) => g.facet === "mechanic" || g.facet === "designer",
+      ),
+    ).toBe(true);
 
     const more = queries.querySmartWishlist({ mode: "more" });
-    const gaps = queries.querySmartWishlist({ mode: "gaps" });
+    const gapsMode = queries.querySmartWishlist({ mode: "gaps" });
     expect(more.localSuggestions[0]?.bggId).toBe(10);
-    expect(gaps.localSuggestions.map((s) => s.bggId)).toContain(10);
+    expect(gapsMode.localSuggestions.map((s) => s.bggId)).toContain(10);
+  });
+
+  it("exposes coveredGaps for wishlist games that fill detected gaps", () => {
+    const { storage, queries } = createTestContext();
+    const now = new Date().toISOString();
+
+    seedCollection(storage, [
+      entry({
+        collId: 1,
+        bggId: 1,
+        name: "Only Deck Builder",
+        own: true,
+        personalRating: 9,
+        numPlays: 20,
+      }),
+      entry({
+        collId: 2,
+        bggId: 50,
+        name: "Wishlist Deck",
+        wishlist: true,
+        wishlistPriority: 2,
+      }),
+      entry({
+        collId: 3,
+        bggId: 51,
+        name: "Wishlist Unrelated",
+        wishlist: true,
+        wishlistPriority: 3,
+      }),
+    ]);
+
+    storage.games.upsertGame(storage.db, {
+      bggId: 1,
+      name: "Only Deck Builder",
+      yearPublished: 2015,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 60,
+      minPlayTime: 45,
+      maxPlayTime: 90,
+      weight: 2.5,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Unique Designer"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Deck Building"],
+      categories: ["Card Game"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 50,
+      name: "Wishlist Deck",
+      yearPublished: 2022,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 60,
+      minPlayTime: 45,
+      maxPlayTime: 90,
+      weight: 2.5,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Unique Designer"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Deck Building"],
+      categories: ["Card Game"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 51,
+      name: "Wishlist Unrelated",
+      yearPublished: 2010,
+      minPlayers: 2,
+      maxPlayers: 6,
+      playingTime: 30,
+      minPlayTime: 20,
+      maxPlayTime: 40,
+      weight: 1.2,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Someone Else"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Roll and Move"],
+      categories: ["Children's Game"],
+      languageDependence: null,
+      bggRating: 5,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+
+    const result = queries.querySmartWishlist({ mode: "balance" });
+    const deck = result.localSuggestions.find((s) => s.bggId === 50);
+    expect(deck).toBeTruthy();
+    expect(
+      deck!.coveredGaps.some(
+        (g) =>
+          (g.facet === "mechanic" && g.value === "Deck Building") ||
+          (g.facet === "designer" && g.value === "Unique Designer"),
+      ) ||
+        deck!.tasteFacets.some(
+          (g) =>
+            (g.facet === "mechanic" && g.value === "Deck Building") ||
+            (g.facet === "designer" && g.value === "Unique Designer"),
+        ),
+    ).toBe(true);
+    // Chips only include facets that hit the wishlist.
+    expect(result.gaps.length).toBeGreaterThan(0);
+    expect(
+      result.gaps.every((g) =>
+        result.localSuggestions.some((s) =>
+          [...s.coveredGaps, ...s.tasteFacets].some(
+            (c) => c.facet === g.facet && c.value === g.value,
+          ),
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not expose designer chips that no wishlist game covers", () => {
+    const { storage, queries } = createTestContext();
+    const now = new Date().toISOString();
+
+    seedCollection(storage, [
+      entry({
+        collId: 1,
+        bggId: 1,
+        name: "CoCredit Hit",
+        own: true,
+        personalRating: 9,
+        numPlays: 30,
+      }),
+      entry({
+        collId: 2,
+        bggId: 60,
+        name: "Wishlist Other",
+        wishlist: true,
+        wishlistPriority: 1,
+      }),
+    ]);
+
+    storage.games.upsertGame(storage.db, {
+      bggId: 1,
+      name: "CoCredit Hit",
+      yearPublished: 2018,
+      minPlayers: 1,
+      maxPlayers: 4,
+      playingTime: 90,
+      minPlayTime: 60,
+      maxPlayTime: 120,
+      weight: 3,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Famous Designer", "Obscure CoDesigner"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Worker Placement"],
+      categories: ["Strategy"],
+      languageDependence: null,
+      bggRating: 8,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+    storage.games.upsertGame(storage.db, {
+      bggId: 60,
+      name: "Wishlist Other",
+      yearPublished: 2024,
+      minPlayers: 2,
+      maxPlayers: 4,
+      playingTime: 45,
+      minPlayTime: 30,
+      maxPlayTime: 60,
+      weight: 2,
+      imageUrl: null,
+      thumbnailUrl: null,
+      description: null,
+      designers: ["Totally Different"],
+      artists: [],
+      publishers: [],
+      mechanics: ["Hand Management"],
+      categories: ["Card Game"],
+      languageDependence: null,
+      bggRating: 7,
+      bggRank: null,
+      thingSyncedAt: now,
+    });
+
+    const result = queries.querySmartWishlist({ mode: "balance" });
+    expect(
+      result.gaps.some(
+        (g) =>
+          g.facet === "designer" &&
+          (g.value === "Obscure CoDesigner" || g.value === "Famous Designer"),
+      ),
+    ).toBe(false);
   });
 
   it("does not claim you play Solo from unplayed owned tags alone", () => {
@@ -1511,5 +1723,204 @@ describe("smart wishlist", () => {
     expect(
       withDisc.discoverySuggestions[0]?.reasons.some((r) => r.kind === "discovery_seed"),
     ).toBe(true);
+  });
+
+  it("hotness scout scores hot list against owned profile and skips owned", async () => {
+    const { storage, db } = createTestContext();
+    const now = new Date().toISOString();
+    seedCollection(storage, [
+      entry({
+        collId: 1,
+        bggId: 1,
+        name: "Owned",
+        own: true,
+        personalRating: 9,
+        numPlays: 10,
+      }),
+      entry({
+        collId: 2,
+        bggId: 50,
+        name: "Already hot owned",
+        own: true,
+        personalRating: 8,
+        numPlays: 3,
+      }),
+      entry({
+        collId: 3,
+        bggId: 99,
+        name: "On wishlist",
+        own: false,
+        wishlist: true,
+        wishlistPriority: 2,
+      }),
+    ]);
+    for (const game of [
+      {
+        bggId: 1,
+        name: "Owned",
+        designers: ["Uwe Rosenberg"],
+        mechanics: ["Worker Placement"],
+        categories: ["Economic"],
+      },
+      {
+        bggId: 50,
+        name: "Already hot owned",
+        designers: ["Other"],
+        mechanics: ["Dice Rolling"],
+        categories: ["Fantasy"],
+      },
+    ]) {
+      storage.games.upsertGame(storage.db, {
+        bggId: game.bggId,
+        name: game.name,
+        yearPublished: 2016,
+        minPlayers: 1,
+        maxPlayers: 4,
+        playingTime: 90,
+        minPlayTime: 60,
+        maxPlayTime: 120,
+        weight: 3,
+        imageUrl: null,
+        thumbnailUrl: null,
+        description: null,
+        designers: game.designers,
+        artists: [],
+        publishers: [],
+        mechanics: game.mechanics,
+        categories: game.categories,
+        languageDependence: null,
+        bggRating: 8,
+        bggRank: null,
+        thingSyncedAt: now,
+      });
+    }
+
+    const { runHotnessScoutQuery } = await import(
+      "../src/query/hotness-scout.js"
+    );
+    const result = await runHotnessScoutQuery(
+      db,
+      {
+        fetchHotGameIds: async () => [50, 99, 100],
+        fetchThings: async (ids) =>
+          ids.map((id) => ({
+            bggId: id,
+            name: id === 99 ? "On wishlist" : "Brand new hot",
+            yearPublished: 2024,
+            thumbnailUrl: null,
+            thingType: "boardgame",
+            designers: id === 99 ? ["Uwe Rosenberg"] : ["Someone"],
+            mechanics: ["Worker Placement"],
+            categories: ["Economic"],
+          })),
+      },
+      { mode: "balance", maxThings: 10, limit: 10 },
+    );
+
+    expect(result.status.ok).toBe(true);
+    expect(result.alreadyOwnedSkipped).toBe(1);
+    expect(result.suggestions.some((s) => s.bggId === 50)).toBe(false);
+    expect(result.suggestions.some((s) => s.bggId === 99)).toBe(true);
+    expect(
+      result.suggestions
+        .find((s) => s.bggId === 99)
+        ?.reasons.some((r) => /wishlist/i.test(r.headline)),
+    ).toBe(true);
+  });
+});
+
+describe("reconcile app tables", () => {
+  it("unions remote-only sessions/reviews and keeps both on conflict", async () => {
+    const { copyFileSync } = await import("node:fs");
+    const local = createTestContext();
+    const remote = createTestContext();
+
+    local.storage.duel.createDuelSession(local.db, {
+      periodFrom: "2026-01-01",
+      periodTo: "2026-01-31",
+      minPlays: 1,
+      remainingBggIds: [1, 2],
+      startedAt: "2026-01-15T10:00:00.000Z",
+      filtersJson: null,
+    });
+    remote.storage.duel.createDuelSession(remote.db, {
+      periodFrom: "2026-02-01",
+      periodTo: "2026-02-28",
+      minPlays: 1,
+      remainingBggIds: [3, 4],
+      startedAt: "2026-02-15T10:00:00.000Z",
+      filtersJson: null,
+    });
+    // Same stable key, different content → conflict
+    const conflictLocal = local.storage.duel.createDuelSession(local.db, {
+      periodFrom: "2026-03-01",
+      periodTo: "2026-03-31",
+      minPlays: 2,
+      remainingBggIds: [5],
+      startedAt: "2026-03-10T10:00:00.000Z",
+      filtersJson: '{"x":1}',
+    });
+    local.storage.duel.insertDuelRound(local.db, {
+      sessionId: conflictLocal.id,
+      roundNumber: 1,
+      candidateABggId: 5,
+      candidateBBggId: 6,
+      winnerBggId: 5,
+      decidedAt: "2026-03-10T11:00:00.000Z",
+    });
+    const conflictRemote = remote.storage.duel.createDuelSession(remote.db, {
+      periodFrom: "2026-03-01",
+      periodTo: "2026-03-31",
+      minPlays: 2,
+      remainingBggIds: [5, 6],
+      startedAt: "2026-03-10T10:00:00.000Z",
+      filtersJson: '{"x":1}',
+    });
+    remote.storage.duel.insertDuelRound(remote.db, {
+      sessionId: conflictRemote.id,
+      roundNumber: 1,
+      candidateABggId: 5,
+      candidateBBggId: 6,
+      winnerBggId: 6,
+      decidedAt: "2026-03-10T11:00:00.000Z",
+    });
+
+    remote.storage.purchaseReviews.insertPurchaseReview(remote.db, {
+      bggId: 99,
+      notes: "from fly",
+      decision: "interesado",
+      overlapScore: 0.5,
+      snapshot: { ok: true },
+    });
+
+    local.db.close();
+    remote.db.close();
+
+    const {
+      unionAppTablesInto,
+      compareAppDatabases,
+      assertNoAppDataLoss,
+    } = await import("../src/storage/reconcile-app-tables.js");
+
+    const report = compareAppDatabases(
+      local.dbPath,
+      remote.dbPath,
+      "local",
+      "remote",
+    );
+    expect(report.sessionsOnlyRight).toBeGreaterThanOrEqual(1);
+    expect(report.sessionConflicts).toBeGreaterThanOrEqual(1);
+    expect(report.reviewsOnlyRight).toBe(1);
+
+    const merge = unionAppTablesInto(local.dbPath, remote.dbPath);
+    expect(merge.sessionsInserted).toBeGreaterThanOrEqual(2);
+    expect(merge.conflictsKeptBoth).toBeGreaterThanOrEqual(1);
+    expect(merge.reviewsInserted).toBe(1);
+
+    expect(assertNoAppDataLoss(local.dbPath, remote.dbPath).ok).toBe(true);
+
+    const mergedPath = join(local.dir, "merged.db");
+    copyFileSync(local.dbPath, mergedPath);
+    expect(assertNoAppDataLoss(mergedPath, remote.dbPath).ok).toBe(true);
   });
 });

@@ -19,6 +19,9 @@
     "query:collection": "tsx src/cli/query-collection.ts",
     "activity": "tsx src/cli/activity.ts",
     "activity:duel": "tsx src/cli/duel.ts",
+    "db:status": "tsx scripts/db-reconcile.ts status",
+    "db:pull": "tsx scripts/db-reconcile.ts pull",
+    "db:push": "tsx scripts/db-reconcile.ts push",
     "db:upload": "tsx scripts/upload-db.ts"
   },
   "engines": {

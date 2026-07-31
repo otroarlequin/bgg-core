@@ -74,6 +74,11 @@ export interface ScoreBreakdown {
   priority: number;
 }
 
+export interface CoveredGap {
+  facet: FacetKind;
+  value: string;
+}
+
 export interface SmartWishlistSuggestion {
   source: "local" | "discovery";
   bggId: number;
@@ -85,6 +90,10 @@ export interface SmartWishlistSuggestion {
   score: number;
   breakdown: ScoreBreakdown;
   reasons: Reason[];
+  /** Classic collection gaps this candidate covers — for scoring + chip filters. */
+  coveredGaps: CoveredGap[];
+  /** Mechanics/designers on this game with taste ≥ 0.25 (wishlist filter fallback). */
+  tasteFacets: CoveredGap[];
   discoverySeed?: string;
 }
 
@@ -366,8 +375,13 @@ function buildFacetMaps(owned: OwnedRow[]): {
     for (const m of parseJsonArray(row.mechanics_json)) {
       bump(mechanics, m, row, base * facetSignalWeight(m));
     }
-    for (const d of parseJsonArray(row.designers_json)) {
-      bump(designers, d, row, base);
+    // Split weight across co-designers so a single obscure credit
+    // on a heavily played game does not look like a "designer gap".
+    const designerList = parseJsonArray(row.designers_json);
+    const designerShare =
+      designerList.length > 0 ? base / designerList.length : 0;
+    for (const d of designerList) {
+      bump(designers, d, row, designerShare);
     }
     for (const c of parseJsonArray(row.categories_json)) {
       bump(categories, c, row, base * facetSignalWeight(c));
@@ -420,6 +434,9 @@ function computeGaps(entries: FacetTasteEntry[]): GapEntry[] {
     if (group.length === 0) continue;
     const tastes = group.map((e) => e.taste).sort((a, b) => b - a);
     const highBar = percentileThreshold(tastes, 70);
+    // Designers need a clearer play signal; co-credits are noisy.
+    const minPlaysStrong = facet === "designer" ? 5 : 1;
+    const minPlaysSoft = facet === "designer" ? 8 : 2;
 
     for (const e of group) {
       const avgPlays =
@@ -435,7 +452,7 @@ function computeGaps(entries: FacetTasteEntry[]): GapEntry[] {
         continue;
       }
       if (e.taste < highBar) continue;
-      if (e.ownedCount <= 1) {
+      if (e.ownedCount <= 1 && e.totalPlays >= minPlaysStrong) {
         gaps.push({
           facet,
           value: e.value,
@@ -443,7 +460,7 @@ function computeGaps(entries: FacetTasteEntry[]): GapEntry[] {
           taste: e.taste,
           ownedCount: e.ownedCount,
         });
-      } else if (e.ownedCount === 2) {
+      } else if (e.ownedCount === 2 && e.totalPlays >= minPlaysSoft) {
         gaps.push({
           facet,
           value: e.value,
@@ -927,10 +944,17 @@ export function scoreCandidate(
   }
 
   if (candidate.source === "discovery" && candidate.discoverySeed) {
+    const hotSeed =
+      normalizeToken(candidate.discoverySeed) ===
+      normalizeToken("tendencias en BGG");
     reasons.push({
       kind: "discovery_seed",
       strength: "high",
-      headline: `Descubierto por tu interés en ${candidate.discoverySeed} (aún no está en tu colección).`,
+      headline: hotSeed
+        ? "Candidato de la hot list de BGG, puntuado contra tu mesa."
+        : candidate.discoverySeed.startsWith("hot BGG #")
+          ? `Está en la hot list de BGG (${candidate.discoverySeed.replace("hot ", "")}), puntuado contra tu mesa.`
+          : `Descubierto por tu interés en ${candidate.discoverySeed} (aún no está en tu colección).`,
     });
   }
 
@@ -938,6 +962,20 @@ export function scoreCandidate(
     0,
     Math.min(100, Math.round(fit + gap + novelty + priority)),
   );
+
+  const coveredGaps: CoveredGap[] = covered
+    .filter((g) => g.facet === "mechanic" || g.facet === "designer")
+    .map((g) => ({ facet: g.facet, value: g.value }));
+
+  const tasteFacets: CoveredGap[] = [];
+  for (const m of candidate.mechanics) {
+    const t = ctx.tasteByKey.get(`mechanic:${normalizeToken(m)}`) ?? 0;
+    if (t >= 0.25) tasteFacets.push({ facet: "mechanic", value: m });
+  }
+  for (const d of candidate.designers) {
+    const t = ctx.tasteByKey.get(`designer:${normalizeToken(d)}`) ?? 0;
+    if (t >= 0.25) tasteFacets.push({ facet: "designer", value: d });
+  }
 
   return {
     source: candidate.source,
@@ -955,8 +993,104 @@ export function scoreCandidate(
       priority: Math.round(priority * 10) / 10,
     },
     reasons: topReasons(reasons),
+    coveredGaps,
+    tasteFacets,
     discoverySeed: candidate.discoverySeed,
   };
+}
+
+function gapLookupKey(facet: string, value: string): string {
+  return `${facet}:${normalizeToken(value)}`;
+}
+
+/**
+ * UI chips must be actionable against the wishlist: only expose gaps that at
+ * least one local suggestion covers. Falls back to high-taste facets that
+ * appear on wishlist items when classic gaps do not intersect.
+ */
+export function selectExposedGaps(
+  gaps: GapEntry[],
+  suggestions: SmartWishlistSuggestion[],
+  tasteByKey: Map<string, number> = new Map(),
+): GapEntry[] {
+  const coverage = new Map<string, number>();
+  for (const s of suggestions) {
+    for (const g of s.coveredGaps ?? []) {
+      if (g.facet !== "mechanic" && g.facet !== "designer") continue;
+      const k = gapLookupKey(g.facet, g.value);
+      coverage.set(k, (coverage.get(k) ?? 0) + 1);
+    }
+  }
+
+  const usable = gaps.filter(
+    (g) =>
+      g.kind !== "saturated" &&
+      (g.facet === "mechanic" || g.facet === "designer") &&
+      (coverage.get(gapLookupKey(g.facet, g.value)) ?? 0) > 0,
+  );
+
+  const rank = (list: GapEntry[]) =>
+    [...list].sort((a, b) => {
+      const ca = coverage.get(gapLookupKey(a.facet, a.value)) ?? 0;
+      const cb = coverage.get(gapLookupKey(b.facet, b.value)) ?? 0;
+      if (cb !== ca) return cb - ca;
+      const kindRank = { strong: 0, soft: 1, saturated: 2 };
+      if (kindRank[a.kind] !== kindRank[b.kind]) {
+        return kindRank[a.kind] - kindRank[b.kind];
+      }
+      return b.taste - a.taste || a.value.localeCompare(b.value);
+    });
+
+  let mechs = rank(usable.filter((g) => g.facet === "mechanic")).slice(0, 8);
+  let designers = rank(usable.filter((g) => g.facet === "designer")).slice(
+    0,
+    8,
+  );
+
+  // Fallback: high-taste facets that actually appear on wishlist cards.
+  if (mechs.length + designers.length === 0 && suggestions.length > 0) {
+    const facetHits = new Map<
+      string,
+      { facet: FacetKind; value: string; count: number; taste: number }
+    >();
+    for (const s of suggestions) {
+      for (const g of s.tasteFacets ?? []) {
+        if (g.facet !== "mechanic" && g.facet !== "designer") continue;
+        const k = gapLookupKey(g.facet, g.value);
+        const taste = tasteByKey.get(k) ?? 0;
+        if (taste < 0.25) continue;
+        const cur = facetHits.get(k);
+        if (cur) cur.count += 1;
+        else {
+          facetHits.set(k, {
+            facet: g.facet,
+            value: g.value,
+            count: 1,
+            taste,
+          });
+        }
+      }
+    }
+
+    const synthesized = [...facetHits.values()]
+      .sort((a, b) => b.count - a.count || b.taste - a.taste)
+      .map(
+        (f): GapEntry => ({
+          facet: f.facet,
+          value: f.value,
+          kind: "soft",
+          taste: f.taste,
+          ownedCount: 0,
+        }),
+      );
+    mechs = synthesized.filter((g) => g.facet === "mechanic").slice(0, 8);
+    designers = synthesized.filter((g) => g.facet === "designer").slice(0, 8);
+  }
+
+  return [...mechs, ...designers].sort((a, b) => {
+    if (a.facet !== b.facet) return a.facet === "mechanic" ? -1 : 1;
+    return b.taste - a.taste || a.value.localeCompare(b.value);
+  });
 }
 
 function sortSuggestions(
@@ -987,57 +1121,66 @@ export function querySmartWishlist(
   const built = buildPlayProfile(db);
   const rows = loadLocalCandidates(db, { includeWantToPlay, includeExpansions });
 
-  const scored = rows.map((row) =>
-    scoreCandidate(
-      {
-        source: "local",
-        bggId: row.bgg_id,
-        name: decodeHtmlEntities(row.name),
-        thumbnailUrl: row.thumbnail_url,
-        yearPublished: row.year_published,
-        subtype: row.subtype,
-        wishlistPriority: row.wishlist_priority,
-        designers: parseJsonArray(row.designers_json),
-        mechanics: parseJsonArray(row.mechanics_json),
-        categories: parseJsonArray(row.categories_json),
-      },
-      {
-        mode,
-        tasteByKey: built.tasteByKey,
-        facetMeta: built.facetMeta,
-        gaps: built.gaps,
-        ownedTokens: built.ownedTokens,
-      },
+  const scored = sortSuggestions(
+    rows.map((row) =>
+      scoreCandidate(
+        {
+          source: "local",
+          bggId: row.bgg_id,
+          name: decodeHtmlEntities(row.name),
+          thumbnailUrl: row.thumbnail_url,
+          yearPublished: row.year_published,
+          subtype: row.subtype,
+          wishlistPriority: row.wishlist_priority,
+          designers: parseJsonArray(row.designers_json),
+          mechanics: parseJsonArray(row.mechanics_json),
+          categories: parseJsonArray(row.categories_json),
+        },
+        {
+          mode,
+          tasteByKey: built.tasteByKey,
+          facetMeta: built.facetMeta,
+          gaps: built.gaps,
+          ownedTokens: built.ownedTokens,
+        },
+      ),
     ),
-  );
+  ).slice(0, localLimit);
 
   return {
     profile: built.profile,
-    gaps: built.gaps.filter((g) => g.kind !== "saturated").slice(0, 8),
-    localSuggestions: sortSuggestions(scored).slice(0, localLimit),
+    gaps: selectExposedGaps(built.gaps, scored, built.tasteByKey),
+    localSuggestions: scored,
     discoverySuggestions: [],
     discoveryStatus: {
       available: false,
-      message: "Discovery no solicitado en esta consulta local.",
+      message: "Discovery desactivado en esta consulta.",
     },
   };
 }
 
 export interface DiscoveryFetchDeps {
-  searchGames: (
+  searchDesigners: (
     query: string,
     limit: number,
-  ) => Promise<Array<{ bggId: number; name: string; type: string }>>;
-  fetchThing: (bggId: number) => Promise<{
-    bggId: number;
-    name: string;
-    yearPublished: number | null;
-    thumbnailUrl: string | null;
-    thingType: string | null;
-    designers: string[];
-    mechanics: string[];
-    categories: string[];
-  }>;
+  ) => Promise<Array<{ bggId: number; name: string }>>;
+  fetchDesignerGameIds: (
+    designerId: number,
+    limit: number,
+  ) => Promise<number[]>;
+  fetchHotGameIds: (limit: number) => Promise<number[]>;
+  fetchThings: (bggIds: number[]) => Promise<
+    Array<{
+      bggId: number;
+      name: string;
+      yearPublished: number | null;
+      thumbnailUrl: string | null;
+      thingType: string | null;
+      designers: string[];
+      mechanics: string[];
+      categories: string[];
+    }>
+  >;
 }
 
 /**
@@ -1063,75 +1206,96 @@ export function attachDiscoverySuggestions(
     }),
   );
 
-  const filtered = sortSuggestions(scored).filter((s) => s.score >= 18);
+  // Soft floor: discovery has no wishlist_priority boost, so avoid a high bar.
+  const filtered = sortSuggestions(scored).filter((s) => s.score >= 8);
+  const picked =
+    filtered.length > 0
+      ? filtered.slice(0, discoveryLimit)
+      : sortSuggestions(scored).slice(0, discoveryLimit);
+
   return {
     ...base,
-    discoverySuggestions: filtered.slice(0, discoveryLimit),
-    discoveryStatus: { available: true },
+    discoverySuggestions: picked,
+    discoveryStatus: base.discoveryStatus.available
+      ? base.discoveryStatus
+      : { available: true },
   };
 }
 
+/**
+ * Hot-list discovery (fast, reliable). Designer person pages rarely expose
+ * linked games in XML API2, so we avoid that multi-request path.
+ */
 export async function collectDiscoveryCandidates(
   db: Db,
   deps: DiscoveryFetchDeps,
   options: {
     includeExpansions?: boolean;
-    maxSearches?: number;
     maxThings?: number;
-    searchLimit?: number;
+    hotLimit?: number;
   } = {},
 ): Promise<{
   candidates: CandidateInput[];
   error?: string;
+  stats?: {
+    designerSeeds: number;
+    designerGameIds: number;
+    hotGameIds: number;
+    fetched: number;
+  };
 }> {
   const includeExpansions = options.includeExpansions === true;
-  const maxSearches = options.maxSearches ?? 5;
   const maxThings = options.maxThings ?? 12;
-  const searchLimit = options.searchLimit ?? 8;
+  const hotLimit = options.hotLimit ?? 20;
 
-  const { designerSeeds, mechanicGapSeeds } = buildPlayProfile(db);
+  const { profile } = buildPlayProfile(db);
   const excluded = loadExcludedBggIds(db);
 
-  const seeds: Array<{ query: string; label: string; requireMechanic?: string }> =
-    [];
-  for (const d of designerSeeds.slice(0, maxSearches)) {
-    seeds.push({ query: d, label: d });
-  }
-  const remaining = Math.max(0, maxSearches - seeds.length);
-  for (const m of mechanicGapSeeds.slice(0, remaining)) {
-    seeds.push({ query: m, label: m, requireMechanic: m });
-  }
-
-  if (seeds.length === 0) {
+  if (profile.ownedCount === 0) {
     return {
       candidates: [],
-      error: "No hay semillas de descubrimiento (perfil vacío).",
+      error: "No hay perfil owned para puntuar descubrimientos.",
+      stats: {
+        designerSeeds: 0,
+        designerGameIds: 0,
+        hotGameIds: 0,
+        fetched: 0,
+      },
     };
   }
 
-  const idToSeed = new Map<number, string>();
-  const idRequireMech = new Map<number, string>();
+  let hotGameIds = 0;
 
   try {
-    for (const seed of seeds) {
-      const hits = await deps.searchGames(seed.query, searchLimit);
-      for (const hit of hits) {
-        if (excluded.has(hit.bggId)) continue;
-        if (!includeExpansions && hit.type === "boardgameexpansion") continue;
-        if (!idToSeed.has(hit.bggId)) {
-          idToSeed.set(hit.bggId, seed.label);
-          if (seed.requireMechanic) {
-            idRequireMech.set(hit.bggId, seed.requireMechanic);
-          }
-        }
-      }
+    const hotIds = await deps.fetchHotGameIds(hotLimit);
+    const idToSeed = new Map<number, string>();
+
+    for (const id of hotIds) {
+      if (excluded.has(id)) continue;
+      idToSeed.set(id, "tendencias en BGG");
+      hotGameIds += 1;
+      if (idToSeed.size >= maxThings) break;
     }
 
-    const ids = [...idToSeed.keys()].slice(0, maxThings);
+    const ids = [...idToSeed.keys()];
+    if (ids.length === 0) {
+      return {
+        candidates: [],
+        error:
+          "La hot list de BGG no trajo juegos nuevos respecto a tu colección.",
+        stats: {
+          designerSeeds: 0,
+          designerGameIds: 0,
+          hotGameIds,
+          fetched: 0,
+        },
+      };
+    }
+
+    const things = await deps.fetchThings(ids);
     const candidates: CandidateInput[] = [];
 
-    for (const id of ids) {
-      const game = await deps.fetchThing(id);
+    for (const game of things) {
       if (excluded.has(game.bggId)) continue;
       if (
         !includeExpansions &&
@@ -1140,15 +1304,7 @@ export async function collectDiscoveryCandidates(
       ) {
         continue;
       }
-      const reqMech = idRequireMech.get(id);
-      if (reqMech) {
-        const ok = game.mechanics.some(
-          (m) => normalizeToken(m) === normalizeToken(reqMech),
-        );
-        if (!ok) continue;
-      }
-      // Prefer games that actually include the designer seed when seed was a designer
-      const seedLabel = idToSeed.get(id) ?? "tu perfil";
+
       candidates.push({
         source: "discovery",
         bggId: game.bggId,
@@ -1160,14 +1316,31 @@ export async function collectDiscoveryCandidates(
         designers: game.designers,
         mechanics: game.mechanics,
         categories: game.categories,
-        discoverySeed: seedLabel,
+        discoverySeed: idToSeed.get(game.bggId) ?? "tendencias en BGG",
       });
     }
 
-    return { candidates };
+    return {
+      candidates,
+      stats: {
+        designerSeeds: 0,
+        designerGameIds: 0,
+        hotGameIds,
+        fetched: things.length,
+      },
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { candidates: [], error: message };
+    return {
+      candidates: [],
+      error: message,
+      stats: {
+        designerSeeds: 0,
+        designerGameIds: 0,
+        hotGameIds,
+        fetched: 0,
+      },
+    };
   }
 }
 
