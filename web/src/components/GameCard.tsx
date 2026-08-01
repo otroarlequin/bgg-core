@@ -54,8 +54,10 @@ function formatTime(
   return null;
 }
 
-function truncate(text: string, max = 140): string {
-  const clean = text.replace(/\s+/g, " ").trim();
+function truncate(text: unknown, max = 140): string {
+  const clean = String(text ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (clean.length <= max) return clean;
   return `${clean.slice(0, max - 1).trimEnd()}…`;
 }

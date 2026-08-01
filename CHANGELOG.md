@@ -7,8 +7,17 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-### Notes
-- Próximo hilo previsto: variante pública multi-visitante (sync BGG volátil por sesión) separada de este core personal.
+### Added
+- **BGG Profile** (deploy aparte): sesión efímera por visitante (`/profile`), sync collection+plays+things, TTL 6h, rate limit, SQLite temporal; duel y validador sin persistencia durable; `Dockerfile.profile` + `fly.profile.toml`.
+- Scripts locales `dev:profile` / `dev:profile:all` (API `:3002` + Vite `:5174`).
+
+### Changed
+- Contexto de DB por request (`AsyncLocalStorage`) para aislar sesiones profile del core personal.
+- Validador: `persist: false` / `APP_MODE=profile` bloquea save y wishlist durable.
+- Proxy Vite: rutas desde `/profile` van a la API profile; stub claro en la API personal si falta `:3002`.
+
+### Fixed
+- `decodeHtmlEntities` / `stripHtmlToText` toleran payloads BGG no-string (evita `text.replace is not a function` al sincronizar plays/things).
 
 ## [0.2.0] — 2026-07-31
 

@@ -35,8 +35,18 @@ export class ApiError extends Error {
   }
 }
 
+function isProfileMode(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.location.pathname.startsWith("/profile")
+  );
+}
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetch(url, {
+    ...init,
+    credentials: isProfileMode() ? "include" : (init?.credentials ?? "same-origin"),
+  });
   const text = await res.text();
   const contentType = res.headers.get("content-type") ?? "";
   const looksHtml =
@@ -243,4 +253,44 @@ export function updateSettings(params: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   });
+}
+
+export interface ProfileSessionView {
+  username: string;
+  createdAt: string;
+  lastAccessAt: string;
+  expiresAt: string;
+  ttlMs: number;
+}
+
+export interface ProfileSyncResult {
+  username: string;
+  collection: { count: number; incremental: boolean };
+  plays: { count: number; incremental: boolean };
+  things: { requested: number; synced: number; skipped: number };
+  durationMs: number;
+}
+
+export function fetchProfileSession(): Promise<{
+  active: boolean;
+  session?: ProfileSessionView;
+}> {
+  return fetchJson("/api/profile/session");
+}
+
+export function createProfileSession(username: string): Promise<{
+  ok: boolean;
+  message?: string;
+  session?: ProfileSessionView;
+  sync?: ProfileSyncResult;
+}> {
+  return fetchJson("/api/profile/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username }),
+  });
+}
+
+export function endProfileSession(): Promise<{ ok: boolean }> {
+  return fetchJson("/api/profile/session", { method: "DELETE" });
 }

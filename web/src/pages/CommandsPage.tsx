@@ -88,9 +88,10 @@ export function CommandsPage() {
 npm install --prefix web
 cp .env.example .env   # BGG_TOKEN + BGG_USERNAME
 
-npm run dev            # API :3001 + web :5173
+npm run dev            # API personal :3001 + web :5173
 npm run dev:api
-npm run dev:web`}</CodeBlock>
+npm run dev:web
+npm run dev:profile:all  # Profile :3002 + Vite → /profile`}</CodeBlock>
       </Section>
 
       <Section title="Sync con BoardGameGeek">

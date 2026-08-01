@@ -11,6 +11,7 @@ import type {
 } from "../../api/types";
 import { BggLink } from "../../components/BggLink";
 import { GameSubtypeBadge } from "../../components/GameSubtypeBadge";
+import { detectAppMode } from "../../appMode";
 
 type Step = "input" | "search" | "analysis";
 
@@ -710,6 +711,12 @@ export function PurchaseValidatorActivity({
             ) : null}
           </div>
 
+          {detectAppMode() === "profile" ? (
+            <p className="rounded-xl border border-border bg-surface-raised/40 p-4 text-sm text-muted">
+              En perfil temporal el análisis no se guarda ni se escribe wishlist
+              durable; solo puedes explorarlo en esta sesión.
+            </p>
+          ) : (
           <div className="grid gap-4 rounded-xl border border-border bg-surface-raised/60 p-4 lg:grid-cols-2">
             <div className="space-y-3">
               <h3 className="font-semibold text-ink">Guardar análisis (opcional)</h3>
@@ -778,6 +785,7 @@ export function PurchaseValidatorActivity({
               </button>
             </div>
           </div>
+          )}
         </div>
       ) : null}
     </div>

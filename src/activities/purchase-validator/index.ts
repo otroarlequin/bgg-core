@@ -26,6 +26,8 @@ export interface PurchaseValidatorParams {
   wishlistPriority?: number;
   overlapScore?: number;
   snapshot?: unknown;
+  /** When false, save/wishlist are rejected (profile / ephemeral mode). Default true. */
+  persist?: boolean;
 }
 
 export interface PurchaseValidatorOutput {
@@ -117,7 +119,16 @@ export async function runPurchaseValidator(
     };
   }
 
+  const ephemeral =
+    params.persist === false || process.env.APP_MODE === "profile";
+
   if (action === "save") {
+    if (ephemeral) {
+      return {
+        message:
+          "En modo perfil temporal no se guardan reviews. El análisis sigue disponible en esta sesión.",
+      };
+    }
     const bggId = params.bggId;
     if (bggId == null) {
       return { message: "Falta bggId para guardar." };
@@ -140,6 +151,12 @@ export async function runPurchaseValidator(
   }
 
   if (action === "wishlist") {
+    if (ephemeral) {
+      return {
+        message:
+          "En modo perfil temporal no se modifica la wishlist local durable.",
+      };
+    }
     const bggId = params.bggId;
     const priority = params.wishlistPriority ?? 3;
     if (bggId == null) {

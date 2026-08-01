@@ -31,4 +31,4 @@ export function createStorageService(db: Db): StorageService {
   };
 }
 
-export { createDatabase } from "./database.js";
+export { createDatabase, type Db } from "./database.js";

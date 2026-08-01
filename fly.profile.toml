@@ -1,0 +1,36 @@
+# Fly app for ephemeral BGG Profile (visitors). Separate from bgg-core personal.
+# Deploy: fly deploy -c fly.profile.toml -a bgg-profile
+# Secrets: BGG_TOKEN (required). Do NOT mount the personal volume.
+
+app = 'bgg-profile'
+primary_region = 'lax'
+
+[build]
+  dockerfile = 'Dockerfile.profile'
+
+[env]
+  HOST = '0.0.0.0'
+  PORT = '3001'
+  APP_MODE = 'profile'
+  PROFILE_SESSIONS_DIR = '/tmp/bgg-profile-sessions'
+  WEB_ROOT = '/app/web/dist'
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '20s'
+    method = 'GET'
+    path = '/api/health'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1

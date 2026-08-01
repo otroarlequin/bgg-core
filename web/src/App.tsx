@@ -6,6 +6,7 @@ import { ActivitiesPage } from "./pages/ActivitiesPage";
 import { CommandsPage } from "./pages/CommandsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import type { CollectionQueryParams } from "./api/types";
+import type { AppMode } from "./appMode";
 import {
   type CollectionPreset,
   collectionFiltersFromPreset,
@@ -18,14 +19,6 @@ type TabId =
   | "activities"
   | "commands"
   | "settings";
-
-const tabs: Array<{ id: Exclude<TabId, "settings">; label: string }> = [
-  { id: "summary", label: "Resumen" },
-  { id: "collection", label: "Colección" },
-  { id: "plays", label: "Partidas" },
-  { id: "activities", label: "Actividades" },
-  { id: "commands", label: "Comandos" },
-];
 
 function GearIcon() {
   return (
@@ -51,7 +44,18 @@ function GearIcon() {
   );
 }
 
-export default function App() {
+export default function App({ mode = "personal" }: { mode?: AppMode }) {
+  const isProfile = mode === "profile";
+  const tabs: Array<{ id: Exclude<TabId, "settings">; label: string }> = [
+    { id: "summary", label: "Resumen" },
+    { id: "collection", label: "Colección" },
+    { id: "plays", label: "Partidas" },
+    { id: "activities", label: "Actividades" },
+    ...(isProfile
+      ? []
+      : [{ id: "commands" as const, label: "Comandos" }]),
+  ];
+
   const [activeTab, setActiveTab] = useState<TabId>("summary");
   const [collectionFilters, setCollectionFilters] = useState<CollectionQueryParams>(
     () => collectionFiltersFromPreset("owned"),
@@ -67,9 +71,13 @@ export default function App() {
       <header className="border-b border-border bg-surface-raised/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-ink">BGG Core</h1>
+            <h1 className="text-2xl font-bold text-ink">
+              {isProfile ? "BGG Profile" : "BGG Core"}
+            </h1>
             <p className="text-sm text-muted">
-              Tu colección y partidas de BoardGameGeek
+              {isProfile
+                ? "Sesión temporal — colección y partidas desde BGG"
+                : "Tu colección y partidas de BoardGameGeek"}
             </p>
           </div>
           <nav className="flex flex-wrap gap-2">
@@ -114,8 +122,8 @@ export default function App() {
         ) : null}
         {activeTab === "plays" ? <PlaysPage /> : null}
         {activeTab === "activities" ? <ActivitiesPage /> : null}
-        {activeTab === "commands" ? <CommandsPage /> : null}
-        {activeTab === "settings" ? <SettingsPage /> : null}
+        {activeTab === "commands" && !isProfile ? <CommandsPage /> : null}
+        {activeTab === "settings" ? <SettingsPage mode={mode} /> : null}
       </main>
     </div>
   );

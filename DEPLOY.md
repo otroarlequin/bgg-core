@@ -130,3 +130,18 @@ fly secrets set BGG_TOKEN="tu-token" BGG_USERNAME="tu-usuario" -a bgg-core
 ## Coste / sleep
 
 Con `min_machines_running = 0` la máquina puede apagarse en idle (cold start de unos segundos al entrar desde el celular). El sync BGG y el reconcile son **on-demand** a propósito (no hay sync continuo).
+
+## App pública Profile (visitantes)
+
+Deploy **separado** del core personal: no monta el volumen `/data` de `bgg-core`. Cada visitante obtiene una SQLite temporal (TTL 6 h) tras indicar su username BGG en `/profile`.
+
+```bash
+fly apps create bgg-profile
+fly secrets set BGG_TOKEN="tu-token" -a bgg-profile
+fly deploy -c fly.profile.toml -a bgg-profile
+```
+
+- Dockerfile: `Dockerfile.profile` → `node dist/api/profile-server.js`
+- Secrets: `BGG_TOKEN` (obligatorio). No uses el volumen ni la DB de la app personal.
+- Rate limit: creaciones de sesión por IP; tope global de sesiones concurrentes.
+- Local: `npm run dev:profile:all` y abre `http://localhost:5173/profile`.

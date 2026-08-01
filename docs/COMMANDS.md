@@ -10,10 +10,13 @@ npm install
 npm install --prefix web
 cp .env.example .env   # BGG_TOKEN + BGG_USERNAME
 
-npm run dev            # API :3001 + web :5173
-npm run dev:api        # Solo API
-npm run dev:web        # Solo Vite
+npm run dev            # API personal :3001 + web :5173
+npm run dev:api        # Solo API personal
+npm run dev:web        # Solo Vite (proxy → :3001)
+npm run dev:profile:all  # API profile :3002 + Vite :5174 → http://localhost:5174/profile
 ```
+
+> Si dejas `npm run dev` (personal) en :5173, **no** uses esa URL para profile: abre **http://localhost:5174/profile**.
 
 ## Sync con BoardGameGeek
 

@@ -13,6 +13,7 @@ import { bggRoutes } from "./routes/bgg.js";
 import { mediaRoutes } from "./routes/media.js";
 import { syncRoutes } from "./routes/sync.js";
 import { settingsRoutes } from "./routes/settings.js";
+import { profileStubRoutes } from "./routes/profile-stub.js";
 import { loadConfig } from "../config/index.js";
 import { getDb } from "./context.js";
 
@@ -80,6 +81,12 @@ app.route("/api/bgg", bggRoutes);
 app.route("/api/media", mediaRoutes);
 app.route("/api/sync", syncRoutes);
 app.route("/api/settings", settingsRoutes);
+app.route("/api/profile", profileStubRoutes);
+
+// Profile UI belongs to the separate profile deploy (see profile-server).
+// Vite still serves /profile in local web; personal production redirects away.
+app.get("/profile", (c) => c.redirect("/", 302));
+app.get("/profile/*", (c) => c.redirect("/", 302));
 
 if (serveWeb) {
   // serveStatic root is relative to cwd; rewrite absolute WEB_ROOT → relative.

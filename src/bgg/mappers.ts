@@ -289,7 +289,7 @@ export function mapPlayItem(
   const mappedPlay: Play = {
     playId,
     bggId: Number(item?.objectid ?? item?.id ?? 0),
-    gameName: decodeHtmlEntities(item?.name ?? "Unknown"),
+    gameName: getPrimaryName(item?.name),
     date: play.date,
     quantity: toInt(play.quantity) ?? 1,
     length: toInt(play.length) ?? 0,

@@ -44,6 +44,37 @@ describe("decodeHtmlEntities", () => {
     expect(decodeHtmlEntities("Tom &amp; Jerry")).toBe("Tom & Jerry");
     expect(decodeHtmlEntities("A &#x27;quoted&#x27; name")).toBe("A 'quoted' name");
   });
+
+  it("coerces non-string BGG payloads without throwing", async () => {
+    const { decodeHtmlEntities, stripHtmlToText } = await import(
+      "../src/utils/html-entities.js"
+    );
+    expect(decodeHtmlEntities({ value: "Tom &amp; Jerry" })).toBe("Tom & Jerry");
+    expect(decodeHtmlEntities(42)).toBe("42");
+    expect(decodeHtmlEntities(null)).toBe("");
+    expect(decodeHtmlEntities([{ value: "A" }, { value: "B" }])).toBe("A B");
+    expect(stripHtmlToText({ value: "<p>Hi&amp;bye</p>" })).toBe("Hi&bye");
+    expect(stripHtmlToText(null)).toBeNull();
+  });
+});
+
+describe("mapPlayItem name shapes", () => {
+  it("accepts object name from BGG plays XML quirks", async () => {
+    const { mapPlayItem } = await import("../src/bgg/mappers.js");
+    const mapped = mapPlayItem(
+      {
+        id: "9",
+        date: "2024-01-01",
+        quantity: "1",
+        length: "0",
+        incomplete: "0",
+        nowinstats: "0",
+        item: { objectid: "100", name: { value: "Brass &amp; Co", type: "primary" } },
+      } as never,
+      new Date().toISOString(),
+    );
+    expect(mapped.play.gameName).toBe("Brass & Co");
+  });
 });
 
 describe("mapThingItemToGame language dependence", () => {

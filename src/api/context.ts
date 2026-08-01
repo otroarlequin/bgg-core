@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { loadConfig } from "../config/index.js";
 import { createQueryService, type QueryService } from "../query/index.js";
 import { queryDashboardSummary } from "../query/summary.js";
@@ -6,30 +7,38 @@ import { createDatabase } from "../storage/database.js";
 import type { ActivityContext } from "../activities/types.js";
 import type { Db } from "../storage/database.js";
 
-let db: Db | null = null;
-let queryService: QueryService | null = null;
-let activityContext: ActivityContext | null = null;
+const dbAls = new AsyncLocalStorage<Db>();
 
+let defaultDb: Db | null = null;
+
+/** DB of the current request (profile session) or the personal default. */
 export function getDb(): Db {
-  if (!db) {
+  const scoped = dbAls.getStore();
+  if (scoped) return scoped;
+  if (!defaultDb) {
     const config = loadConfig();
-    db = createDatabase(config.dbPath);
+    defaultDb = createDatabase(config.dbPath);
   }
-  return db;
+  return defaultDb;
+}
+
+export function runWithDb<T>(db: Db, fn: () => T): T {
+  return dbAls.run(db, fn);
+}
+
+export async function runWithDbAsync<T>(
+  db: Db,
+  fn: () => Promise<T>,
+): Promise<T> {
+  return dbAls.run(db, fn);
 }
 
 export function getQueryService(): QueryService {
-  if (!queryService) {
-    queryService = createQueryService(getDb());
-  }
-  return queryService;
+  return createQueryService(getDb());
 }
 
 export function getActivityContext(): ActivityContext {
-  if (!activityContext) {
-    activityContext = createActivityContext();
-  }
-  return activityContext;
+  return createActivityContext({ db: getDb() });
 }
 
 export function getDashboard() {

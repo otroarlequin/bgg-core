@@ -8,6 +8,7 @@ import {
 } from "../api/client";
 import { AppModal } from "../components/AppModal";
 import { ThemeSelect } from "../components/ThemeSelect";
+import type { AppMode } from "../appMode";
 
 function sourceLabel(source: "db" | "env" | null): string {
   if (source === "db") return "guardado en la app";
@@ -15,11 +16,13 @@ function sourceLabel(source: "db" | "env" | null): string {
   return "sin configurar";
 }
 
-export function SettingsPage() {
+export function SettingsPage({ mode = "personal" }: { mode?: AppMode }) {
+  const isProfile = mode === "profile";
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettings,
+    enabled: !isProfile,
   });
 
   const [usernameDraft, setUsernameDraft] = useState("");
@@ -123,6 +126,29 @@ export function SettingsPage() {
   const current = settings?.bggUsername ?? null;
   const dirty =
     usernameDraft.trim().toLowerCase() !== (current ?? "").toLowerCase();
+
+  if (isProfile) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
+          <h2 className="text-lg font-semibold text-ink">Configuración</h2>
+          <p className="mt-1 text-sm text-muted">
+            En perfil temporal solo puedes cambiar la apariencia. La sesión y el
+            username se gestionan en la barra superior / Salir.
+          </p>
+        </div>
+        <section className="rounded-xl border border-border bg-surface-raised/40 p-4">
+          <h3 className="text-sm font-semibold text-ink">Apariencia</h3>
+          <p className="mt-1 text-xs text-muted">
+            Se guarda en este navegador (localStorage).
+          </p>
+          <div className="mt-4 max-w-xs">
+            <ThemeSelect showLabel />
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
