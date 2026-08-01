@@ -45,11 +45,13 @@ export async function renderTopPlayedCard(
 
   fillBackground(ctx, w, h);
 
-  // Left copper spine
+  // Left accent spine (theme: accent + accent-secondary)
   ctx.fillStyle = P.accent;
   ctx.fillRect(0, 0, 8, h);
-  ctx.fillStyle = "rgba(138,154,106,0.55)";
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = P.accentSecondary;
   ctx.fillRect(8, 0, 3, h);
+  ctx.globalAlpha = 1;
 
   // Header eyebrow
   ctx.fillStyle = P.accent;

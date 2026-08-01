@@ -1,20 +1,25 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { SummaryPage } from "./pages/SummaryPage";
 import { CollectionPage } from "./pages/CollectionPage";
 import { PlaysPage } from "./pages/PlaysPage";
 import { ActivitiesPage } from "./pages/ActivitiesPage";
 import { CommandsPage } from "./pages/CommandsPage";
-import { triggerSync } from "./api/client";
+import { SettingsPage } from "./pages/SettingsPage";
 import type { CollectionQueryParams } from "./api/types";
 import {
   type CollectionPreset,
   collectionFiltersFromPreset,
 } from "./collectionPresets";
 
-type TabId = "summary" | "collection" | "plays" | "activities" | "commands";
+type TabId =
+  | "summary"
+  | "collection"
+  | "plays"
+  | "activities"
+  | "commands"
+  | "settings";
 
-const tabs: Array<{ id: TabId; label: string }> = [
+const tabs: Array<{ id: Exclude<TabId, "settings">; label: string }> = [
   { id: "summary", label: "Resumen" },
   { id: "collection", label: "Colección" },
   { id: "plays", label: "Partidas" },
@@ -22,48 +27,39 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: "commands", label: "Comandos" },
 ];
 
+function GearIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    </svg>
+  );
+}
+
 export default function App() {
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabId>("summary");
   const [collectionFilters, setCollectionFilters] = useState<CollectionQueryParams>(
     () => collectionFiltersFromPreset("owned"),
   );
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   function goToCollection(preset: CollectionPreset) {
     setCollectionFilters(collectionFiltersFromPreset(preset));
     setActiveTab("collection");
-  }
-
-  async function handleSync() {
-    setSyncing(true);
-    setSyncMessage(null);
-    try {
-      const result = await triggerSync();
-      if (!result.ok) {
-        setSyncMessage(result.message ?? "Sync falló");
-        return;
-      }
-      const parts: string[] = [];
-      if (result.collection) {
-        parts.push(
-          `colección ${result.collection.count} (${result.collection.incremental ? "incr." : "full"})`,
-        );
-      }
-      if (result.plays) {
-        parts.push(
-          `partidas ${result.plays.count} (${result.plays.incremental ? "incr." : "full"})`,
-        );
-      }
-      parts.push(`${(result.durationMs / 1000).toFixed(1)}s`);
-      setSyncMessage(`Sync OK: ${parts.join(" · ")}`);
-      await queryClient.invalidateQueries();
-    } catch (err) {
-      setSyncMessage(err instanceof Error ? err.message : "Error al sincronizar");
-    } finally {
-      setSyncing(false);
-    }
   }
 
   return (
@@ -76,37 +72,36 @@ export default function App() {
               Tu colección y partidas de BoardGameGeek
             </p>
           </div>
-          <div className="flex flex-col items-stretch gap-2 sm:items-end">
-            <div className="flex flex-wrap items-center gap-2">
+          <nav className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
               <button
+                key={tab.id}
                 type="button"
-                onClick={() => void handleSync()}
-                disabled={syncing}
-                className="min-h-11 rounded-lg border border-border bg-surface-card px-3 py-2 text-sm font-medium text-accent hover:border-accent/50 hover:bg-surface disabled:opacity-50 md:min-h-0"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  activeTab === tab.id
+                    ? "bg-accent text-surface"
+                    : "bg-surface-card text-ink-soft hover:bg-border"
+                }`}
               >
-                {syncing ? "Sincronizando…" : "Sincronizar con BGG"}
+                {tab.label}
               </button>
-              <nav className="flex flex-wrap gap-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      activeTab === tab.id
-                        ? "bg-accent text-surface"
-                        : "bg-surface-card text-ink-soft hover:bg-border"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
-            {syncMessage ? (
-              <p className="max-w-md text-right text-xs text-muted">{syncMessage}</p>
-            ) : null}
-          </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setActiveTab("settings")}
+              title="Configuración"
+              aria-label="Configuración"
+              aria-pressed={activeTab === "settings"}
+              className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition md:min-h-0 md:min-w-0 md:p-2.5 ${
+                activeTab === "settings"
+                  ? "bg-accent text-surface"
+                  : "bg-surface-card text-ink-soft hover:bg-border hover:text-accent"
+              }`}
+            >
+              <GearIcon />
+            </button>
+          </nav>
         </div>
       </header>
 
@@ -120,6 +115,7 @@ export default function App() {
         {activeTab === "plays" ? <PlaysPage /> : null}
         {activeTab === "activities" ? <ActivitiesPage /> : null}
         {activeTab === "commands" ? <CommandsPage /> : null}
+        {activeTab === "settings" ? <SettingsPage /> : null}
       </main>
     </div>
   );

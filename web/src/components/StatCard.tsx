@@ -11,9 +11,9 @@ interface StatCardProps {
 export function StatCard({ label, value, hint, icon, onClick }: StatCardProps) {
   const interactive = onClick != null;
   const className = [
-    "flex flex-col items-center rounded-xl border border-border bg-surface-raised/70 px-3 py-4 text-center transition sm:px-4",
+    "flex flex-col items-center rounded-xl border border-border bg-surface-raised/70 px-3 py-4 text-center shadow-sm shadow-black/15 transition sm:px-4",
     interactive
-      ? "cursor-pointer hover:border-accent/60 hover:bg-surface-card active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      ? "cursor-pointer hover:border-accent/50 hover:bg-surface-card active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       : "",
   ]
     .filter(Boolean)

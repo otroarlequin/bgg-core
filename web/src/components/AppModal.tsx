@@ -25,7 +25,7 @@ export interface AppModalProps {
 }
 
 /**
- * Modal estándar Cartón y tinta: overlay, panel raised, cierre Esc/backdrop.
+ * Modal estándar: overlay, panel raised, cierre Esc/backdrop.
  */
 export function AppModal({
   open,

@@ -432,8 +432,30 @@ export interface HotnessScoutResult {
 export interface SyncApiResult {
   ok: boolean;
   message?: string;
+  username?: string;
   collection?: { count: number; incremental: boolean };
   plays?: { count: number; incremental: boolean };
   durationMs: number;
+}
+
+export interface AppSettings {
+  bggUsername: string | null;
+  bggUsernameSource: "db" | "env" | null;
+  hasCollectionData: boolean;
+  hasPlaysData: boolean;
+}
+
+export interface UpdateSettingsResult extends AppSettings {
+  ok: boolean;
+  wiped: boolean;
+}
+
+export interface SettingsReplaceRequired {
+  message: string;
+  requiresConfirm: true;
+  previousUsername: string | null;
+  nextUsername: string;
+  hasCollectionData: boolean;
+  hasPlaysData: boolean;
 }
 

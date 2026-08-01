@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 Todos los cambios relevantes de este proyecto se documentan en este archivo.
 
@@ -7,10 +7,18 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Notes
+- Próximo hilo previsto: variante pública multi-visitante (sync BGG volátil por sesión) separada de este core personal.
+
+## [0.2.0] — 2026-07-31
+
+Hito **core personal / single-tenant**: sync on-demand, configuración BGG, actividades, temas y reconcile local↔Fly. Punto estable al que regresar antes de la variante multi-visitante.
+
 ### Added
 - Health enriquecido en `/api/health`: `dbOk`, `dbPath`, `collectionCount`, `playsCount`, `ts` (sin auth).
 - CI GitHub Actions (Node 22): `npm test`, `build`, `build:web`.
-- **Sync BGG on-demand:** `POST /api/sync` (colección + partidas incremental, lock, in-place) + botón “Sincronizar con BGG” en el header.
+- **Sync BGG on-demand:** `POST /api/sync` (colección + partidas incremental, lock, in-place).
+- **Configuración BGG:** username editable en SQLite (`app_settings` / `GET`·`PUT /api/settings`), fallback a `BGG_USERNAME`; al cambiar de usuario con datos, wipe confirmado de colección/partidas/`sync_state` (conserva duels/reviews).
 - **Reconcile local ↔ Fly:** `npm run db:status` / `db:pull` / `db:push` con unión de tablas de app, reporte de discrepancias, fail-closed y asserts anti-pérdida; `db:upload` queda como alias deprecado.
 - Actividad **Shelf of shame**: owned sin partidas, orden antiguos primero (`/api/activities/shelf-of-shame` + UI).
 - Actividad **Qué jugar esta noche**: filtros jugadores/tiempo/peso + sugerencias con score y reshuffle (`/api/activities/what-to-play` + UI).
@@ -21,7 +29,11 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - `TASKS.md` con backlog (export/compartir, wishlist inteligente, auth cookie) y descartados.
 
 ### Changed
-- `DEPLOY.md`: sync BGG en Fly (requiere `BGG_USERNAME`), reconcile bidireccional, y advertencias contra wipe de datos de app.
+- Sección **Configuración** (icono engranaje): cuenta BGG, sync on-demand y temas **Ónix** / **Grafito** / **Cartón** (`localStorage`); el botón sync sale del header.
+- Sync API/CLI usan username efectivo DB → env e incluyen `username` en la respuesta de sync.
+- Fallback SPA: rutas `/api/*` desconocidas responden JSON 404 (no `index.html`).
+- Cards / badges Base–Exp: bordes y tintes con tokens de tema (sin hex fijos de Cartón).
+- `DEPLOY.md`: sync BGG en Fly (username en UI o secret), reconcile bidireccional, y advertencias contra wipe de datos de app.
 - Validador y Partidas: lista de cards en móvil (`md:` tabla); chips/botones con área táctil mayor en móvil.
 - Hub de Actividades: entradas para las actividades nuevas (incl. wishlist inteligente y Hotness scout).
 - **Qué jugar esta noche:** jugadores con rango de facets (hasta 30) + slider; filtros de categorías, mecánicas y dependencia del idioma (mismo patrón que duel/colección); el pool de sugerencias respeta esos filtros (`poolTotal` en la UI).
@@ -82,6 +94,7 @@ Primer release público del core local BGG + interfaz web.
 - Los datos locales (`*.db`, `.env`, `data/`) no se versionan.
 - No se incluye exposición vía túnel/LAN en este release (retirado a propósito).
 
-[Unreleased]: https://github.com/otroarlequin/bgg-core/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/otroarlequin/bgg-core/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/otroarlequin/bgg-core/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/otroarlequin/bgg-core/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/otroarlequin/bgg-core/releases/tag/v0.1.0

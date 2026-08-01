@@ -96,15 +96,20 @@ npm run dev:web`}</CodeBlock>
       <Section title="Sync con BoardGameGeek">
         <p className="text-sm text-muted">
           Refresca colección y partidas en la instancia donde estés (local o Fly).
-          No toca duels ni purchase reviews. En Fly hace falta{" "}
-          <code className="text-ink-soft">BGG_TOKEN</code> +{" "}
-          <code className="text-ink-soft">BGG_USERNAME</code>.
+          No toca duels ni purchase reviews. Username: el de{" "}
+          <strong className="font-medium text-ink-soft">Configuración</strong> (DB)
+          o, si no hay, <code className="text-ink-soft">BGG_USERNAME</code>. Token:{" "}
+          <code className="text-ink-soft">BGG_TOKEN</code>.
         </p>
         <CmdTable
           rows={[
             {
-              name: "Botón «Sincronizar con BGG»",
-              detail: "Header de la app (recomendado en Fly y local).",
+              name: "Configuración → Sincronizar con BGG",
+              detail: "Engranaje en el header (recomendado en Fly y local).",
+            },
+            {
+              name: "GET/PUT /api/settings",
+              detail: "Username BGG; al cambiar con datos, wipe confirmado.",
             },
             {
               name: "POST /api/sync",
@@ -112,11 +117,11 @@ npm run dev:web`}</CodeBlock>
             },
             {
               name: "npm run sync:collection",
-              detail: "CLI; --full para sync completa.",
+              detail: "CLI; --full para sync completa. Username DB→env.",
             },
             {
               name: "npm run sync:plays",
-              detail: "CLI; --full para sync completa.",
+              detail: "CLI; --full para sync completa. Username DB→env.",
             },
             {
               name: "npm run sync:things",

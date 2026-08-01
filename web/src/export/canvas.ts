@@ -114,7 +114,7 @@ export function drawFooter(
   ctx.fillStyle = P.mutedDim;
   ctx.font = "500 16px Georgia, 'Times New Roman', serif";
   ctx.textAlign = "left";
-  ctx.fillText("Cartón y tinta", 48, h - 28);
+  ctx.fillText("BGG Core", 48, h - 28);
   ctx.textAlign = "right";
   ctx.fillText("BGG Core", w - 48, h - 28);
 }

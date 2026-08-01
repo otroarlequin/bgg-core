@@ -1,4 +1,5 @@
 import type { Db } from "./database.js";
+import * as appSettingsRepo from "./repos/app-settings.js";
 import * as collectionRepo from "./repos/collection.js";
 import * as duelRepo from "./repos/duel.js";
 import * as gamesRepo from "./repos/games.js";
@@ -14,6 +15,7 @@ export interface StorageService {
   syncState: typeof syncStateRepo;
   duel: typeof duelRepo;
   purchaseReviews: typeof purchaseReviewsRepo;
+  appSettings: typeof appSettingsRepo;
 }
 
 export function createStorageService(db: Db): StorageService {
@@ -25,6 +27,7 @@ export function createStorageService(db: Db): StorageService {
     syncState: syncStateRepo,
     duel: duelRepo,
     purchaseReviews: purchaseReviewsRepo,
+    appSettings: appSettingsRepo,
   };
 }
 

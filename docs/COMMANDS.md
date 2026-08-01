@@ -19,15 +19,18 @@ npm run dev:web        # Solo Vite
 
 Refresca colección y partidas **en la instancia donde estés** (local o Fly). No toca duels ni purchase reviews.
 
+El **username** efectivo es el guardado en Configuración (tabla `app_settings`) o, si no hay, `BGG_USERNAME` del entorno. Al cambiar de usuario en la UI con datos ya sincronizados, se pide confirmación y se borran colección/partidas/`sync_state` BGG (se conservan duels y reviews).
+
 | Cómo | Comando / acción |
 |------|------------------|
-| UI | Botón **Sincronizar con BGG** (header) |
-| API | `POST /api/sync` con body opcional `{ "collection": true, "plays": true }` |
+| UI | **Configuración** (engranaje) → **Sincronizar con BGG** + username editable |
+| API settings | `GET` / `PUT /api/settings` (`confirmReplace` si cambia el usuario con datos) |
+| API sync | `POST /api/sync` con body opcional `{ "collection": true, "plays": true }` |
 | CLI colección | `npm run sync:collection` (`--full` para completa) |
 | CLI partidas | `npm run sync:plays` (`--full` para completa) |
 | CLI metadatos | `npm run sync:things` (`--force` para re-sync; no está en el botón) |
 
-En Fly hace falta `BGG_TOKEN` y `BGG_USERNAME` como secrets.
+En Fly hace falta `BGG_TOKEN`. `BGG_USERNAME` sigue siendo el default hasta que guardes otro en Configuración (DB del volumen).
 
 ## Reconcile local ↔ Fly
 

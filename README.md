@@ -40,6 +40,7 @@ Abre [http://localhost:5173](http://localhost:5173). La UI habla con la API loca
 | **Partidas** | Historial filtrable por fechas, ganadores e incompletas |
 | **Actividades** | Duel, validador, wishlist inteligente, hotness scout, etc. |
 | **Comandos** | Referencia de operación (sync BGG, reconcile local↔Fly, deploy) |
+| **Configuración** (⚙) | Tema visual y preferencias locales |
 
 Botón **Sincronizar con BGG** en el header: refresca colección + partidas (`POST /api/sync`).
 
@@ -78,7 +79,7 @@ src/query/       Consultas locales
 src/api/         REST local (Hono)
 src/activities/  Plugins (duel, validador, …)
 docs/            Guías de operación
-web/             UI React (paleta Cartón y tinta)
+web/             UI React (temas Ónix / Grafito / Cartón)
 ```
 
 Datos sensibles y locales (`*.db`, `.env`, `data/`) **no** van al repositorio (ver `.gitignore`).

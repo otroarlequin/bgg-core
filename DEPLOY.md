@@ -6,7 +6,7 @@ Comandos de operación (sync, reconcile, arranque): ver también [docs/COMMANDS.
 
 Hay **dos capas** de sincronización (on-demand, no continua):
 
-1. **Sync BGG** — botón en la UI o `POST /api/sync`: refresca colección/partidas desde BoardGameGeek **in-place** en la instancia donde estés (local o Fly). No toca duels/reviews.
+1. **Sync BGG** — en **Configuración** (engranaje) o `POST /api/sync`: refresca colección/partidas desde BoardGameGeek **in-place** en la instancia donde estés (local o Fly). No toca duels/reviews. El username se puede editar en Configuración (SQLite); si no hay, usa `BGG_USERNAME`.
 2. **Reconcile local ↔ Fly** — CLI (`db:status` / `db:pull` / `db:push`): alinea las dos SQLite cuando lo pidas (p. ej. al volver a casa tras usar Fly).
 
 ## Requisitos
@@ -44,7 +44,7 @@ fly deploy
 
 ## Sync BGG (colección / partidas)
 
-Preferido en Fly y en local: botón **Sincronizar con BGG** en el header, o:
+Preferido en Fly y en local: **Configuración** → **Sincronizar con BGG**, o:
 
 ```http
 POST /api/sync
@@ -53,9 +53,9 @@ Content-Type: application/json
 { "collection": true, "plays": true }
 ```
 
-Requiere `BGG_TOKEN` + `BGG_USERNAME` en el servidor. Escribe solo tablas BGG (upsert); **nunca** reemplaza el archivo `.db` ni toca `duel_*` / `purchase_reviews`.
+Username: valor en Configuración (`PUT /api/settings`) o, si no hay, secret/env `BGG_USERNAME`. Token: `BGG_TOKEN`. Escribe solo tablas BGG (upsert); **nunca** reemplaza el archivo `.db` ni toca `duel_*` / `purchase_reviews`. Cambiar de usuario con datos existentes borra colección/partidas tras confirmación.
 
-CLI local (equivalente):
+CLI local (equivalente; username DB → env):
 
 ```bash
 npm run sync:collection
@@ -119,7 +119,7 @@ fly apps restart bgg-core
 |----------|-----|
 | `APP_PASSWORD` | Basic Auth compartida (secret) |
 | `BGG_TOKEN` | Secret: validador, hotness scout, **sync BGG** |
-| `BGG_USERNAME` | Secret: **requerido** para sync de colección/partidas en Fly |
+| `BGG_USERNAME` | Secret: default de username si aún no se guardó otro en Configuración (DB del volumen) |
 | `BGG_DB_PATH` | Default `/data/bgg.db` |
 | `WEB_ROOT` | Default `/app/web/dist` |
 

@@ -1924,3 +1924,101 @@ describe("reconcile app tables", () => {
     expect(assertNoAppDataLoss(mergedPath, remote.dbPath).ok).toBe(true);
   });
 });
+
+describe("app settings / effective BGG username", () => {
+  it("prefers DB username over env and wipes BGG user data", async () => {
+    const { getEffectiveBggUsername } = await import(
+      "../src/config/bgg-username.js"
+    );
+    const {
+      setStoredBggUsername,
+      hasBggUserData,
+      wipeBggUserData,
+    } = await import("../src/storage/repos/app-settings.js");
+    type AppConfig = import("../src/config/index.js").AppConfig;
+
+    const ctx = createTestContext();
+    const now = new Date().toISOString();
+    const config = (username: string | null): AppConfig => ({
+      bggToken: "t",
+      bggUsername: username,
+      dbPath: ctx.dbPath,
+      outputDir: ctx.dir,
+      projectRoot: ctx.dir,
+    });
+
+    seedCollection(ctx.storage, [
+      {
+        collId: 1,
+        bggId: 1,
+        subtype: "boardgame",
+        name: "Game",
+        yearPublished: null,
+        imageUrl: null,
+        thumbnailUrl: null,
+        own: true,
+        prevOwned: false,
+        forTrade: false,
+        want: false,
+        wantToPlay: false,
+        wantToBuy: false,
+        wishlist: false,
+        preordered: false,
+        hasParts: false,
+        wantParts: false,
+        personalRating: null,
+        comment: null,
+        wishlistPriority: null,
+        numPlays: 0,
+        bggRating: null,
+        bggRank: null,
+        lastModified: null,
+        syncedAt: now,
+      },
+    ]);
+    seedPlays(ctx.storage, [
+      {
+        play: {
+          playId: 10,
+          bggId: 1,
+          gameName: "Game",
+          date: "2024-01-01",
+          quantity: 1,
+          length: 0,
+          location: "",
+          incomplete: false,
+          nowinstats: true,
+          comments: null,
+          syncedAt: now,
+        },
+        players: [],
+      },
+    ]);
+    ctx.storage.syncState.setSyncState(ctx.storage.db, "collection", now);
+
+    expect(hasBggUserData(ctx.db)).toEqual({
+      hasCollectionData: true,
+      hasPlaysData: true,
+    });
+
+    expect(getEffectiveBggUsername(ctx.db, config("env-user"))).toEqual({
+      username: "env-user",
+      source: "env",
+    });
+
+    setStoredBggUsername(ctx.db, "db-user");
+    expect(getEffectiveBggUsername(ctx.db, config("env-user"))).toEqual({
+      username: "db-user",
+      source: "db",
+    });
+
+    wipeBggUserData(ctx.db);
+    expect(hasBggUserData(ctx.db)).toEqual({
+      hasCollectionData: false,
+      hasPlaysData: false,
+    });
+    expect(
+      ctx.storage.syncState.getSyncState(ctx.storage.db, "collection"),
+    ).toBeNull();
+  });
+});

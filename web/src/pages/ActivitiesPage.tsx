@@ -206,7 +206,7 @@ export function ActivitiesPage() {
             key={activity.id}
             type="button"
             onClick={() => setActive(activity.id)}
-            className="rounded-2xl border border-border bg-surface-raised/60 p-5 text-left transition hover:border-accent/50 hover:bg-surface-card"
+            className="rounded-2xl border border-border bg-surface-raised/60 p-5 text-left shadow-sm shadow-black/15 transition hover:border-accent/40 hover:bg-surface-card"
           >
             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-surface-card">
               <activity.Icon />

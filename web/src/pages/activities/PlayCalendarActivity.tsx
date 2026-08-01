@@ -456,8 +456,8 @@ export function PlayCalendarActivity() {
           </div>
 
           {selected ? (
-            <div className="overflow-hidden rounded-xl border-2 border-accent-secondary/70 bg-surface-raised/60 shadow-[inset_0_0_0_1px_rgba(138,154,106,0.25)]">
-              <div className="border-b border-accent-secondary/40 bg-accent-secondary/15 px-4 py-3">
+            <div className="overflow-hidden rounded-xl border border-accent-secondary/45 bg-surface-raised/60 ring-1 ring-inset ring-accent-secondary/20">
+              <div className="border-b border-accent-secondary/30 bg-accent-secondary/10 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-accent-secondary">
                   Fecha seleccionada
                 </p>

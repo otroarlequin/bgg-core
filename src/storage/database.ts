@@ -41,6 +41,13 @@ function runMigrations(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS idx_purchase_reviews_bgg_id
       ON purchase_reviews(bgg_id);
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
 }
 
 function ensureColumn(

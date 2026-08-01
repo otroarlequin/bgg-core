@@ -26,7 +26,7 @@ Backlog y decisiones de producto para bgg-core.
 - Workflow CI escrito (Node 22); **aún no está en el remoto**.
 
 ### UI
-- Paleta Cartón y tinta; `GameCard` / `BggLink` / badges Base–Exp.
+- Selector de tema (Ónix / Grafito / Cartón); `GameCard` / `BggLink` / badges Base–Exp.
 - Mobile: matches del validador y partidas como cards; targets táctiles mayores.
 
 ### Actividades

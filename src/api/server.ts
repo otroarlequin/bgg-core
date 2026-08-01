@@ -12,6 +12,7 @@ import { activitiesRoutes } from "./routes/activities.js";
 import { bggRoutes } from "./routes/bgg.js";
 import { mediaRoutes } from "./routes/media.js";
 import { syncRoutes } from "./routes/sync.js";
+import { settingsRoutes } from "./routes/settings.js";
 import { loadConfig } from "../config/index.js";
 import { getDb } from "./context.js";
 
@@ -78,6 +79,7 @@ app.route("/api/activities", activitiesRoutes);
 app.route("/api/bgg", bggRoutes);
 app.route("/api/media", mediaRoutes);
 app.route("/api/sync", syncRoutes);
+app.route("/api/settings", settingsRoutes);
 
 if (serveWeb) {
   // serveStatic root is relative to cwd; rewrite absolute WEB_ROOT → relative.
@@ -88,6 +90,13 @@ if (serveWeb) {
       root: staticRoot,
     }),
   );
+  // SPA fallback must not swallow unknown /api/* (would return HTML index).
+  app.use("*", async (c, next) => {
+    if (c.req.path.startsWith("/api/")) {
+      return c.json({ message: `Ruta no encontrada: ${c.req.path}` }, 404);
+    }
+    await next();
+  });
   app.use(
     "*",
     serveStatic({

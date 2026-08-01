@@ -1,20 +1,72 @@
 @import "tailwindcss";
 
-/* Cartón y tinta — app palette */
+/*
+  Tokens Tailwind apuntan a variables de tema.
+  Temas: onix (default) | grafito | carton
+*/
 @theme {
-  --color-surface: #1a1612;
-  --color-surface-raised: #2a241c;
-  --color-surface-card: #241e18;
-  --color-border: #3d342a;
-  --color-accent: #c47a3a;
-  --color-accent-hover: #d4894a;
-  --color-accent-muted: #8a5a2b;
-  --color-accent-secondary: #8a9a6a;
-  --color-accent-secondary-muted: #5c6b45;
-  --color-ink: #f5efe6;
-  --color-ink-soft: #e8dfd0;
-  --color-muted: #a89880;
-  --color-muted-dim: #7a6c58;
+  --color-surface: var(--theme-surface);
+  --color-surface-raised: var(--theme-surface-raised);
+  --color-surface-card: var(--theme-surface-card);
+  --color-border: var(--theme-border);
+  --color-accent: var(--theme-accent);
+  --color-accent-hover: var(--theme-accent-hover);
+  --color-accent-muted: var(--theme-accent-muted);
+  --color-accent-secondary: var(--theme-accent-secondary);
+  --color-accent-secondary-muted: var(--theme-accent-secondary-muted);
+  --color-ink: var(--theme-ink);
+  --color-ink-soft: var(--theme-ink-soft);
+  --color-muted: var(--theme-muted);
+  --color-muted-dim: var(--theme-muted-dim);
+}
+
+:root,
+[data-theme="onix"] {
+  --theme-surface: #050505;
+  --theme-surface-raised: #121212;
+  --theme-surface-card: #1a1a1a;
+  --theme-border: #333333;
+  --theme-accent: #e8943a;
+  --theme-accent-hover: #f0a54f;
+  --theme-accent-muted: #a86a28;
+  --theme-accent-secondary: #6b7a5c;
+  --theme-accent-secondary-muted: #4a5440;
+  --theme-ink: #f2f2f2;
+  --theme-ink-soft: #e0e0e0;
+  --theme-muted: #8c8c8c;
+  --theme-muted-dim: #5e5e5e;
+}
+
+[data-theme="grafito"] {
+  --theme-surface: #0a0a0a;
+  --theme-surface-raised: #161616;
+  --theme-surface-card: #1e1e1e;
+  --theme-border: #2a2a2a;
+  --theme-accent: #c47a3a;
+  --theme-accent-hover: #d4894a;
+  --theme-accent-muted: #8a5a2b;
+  --theme-accent-secondary: #7a8a6a;
+  --theme-accent-secondary-muted: #555f48;
+  --theme-ink: #e8e8e8;
+  --theme-ink-soft: #d4d4d4;
+  --theme-muted: #9a9a9a;
+  --theme-muted-dim: #6e6e6e;
+}
+
+[data-theme="carton"] {
+  --theme-surface: #1a1612;
+  --theme-surface-raised: #2a241c;
+  --theme-surface-card: #241e18;
+  --theme-border: #3d342a;
+  --theme-accent: #c47a3a;
+  --theme-accent-hover: #d4894a;
+  --theme-accent-muted: #8a5a2b;
+  --theme-accent-secondary: #8a9a6a;
+  --theme-accent-secondary-muted: #5c6b45;
+  --theme-ink: #f5efe6;
+  --theme-ink-soft: #e8dfd0;
+  --theme-muted: #a89880;
+  --theme-muted-dim: #7a6c58;
 }
 
 body {

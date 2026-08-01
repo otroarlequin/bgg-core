@@ -144,24 +144,19 @@ export function GameCard({
   const cover =
     imageUrl ??
     thumbnailUrl ??
-    "https://placehold.co/200x200/2a241c/a89880?text=BGG";
+    "https://placehold.co/200x200/1e1e1e/9a9a9a?text=BGG";
 
-  const frameShadow = isExpansion
-    ? "shadow-[inset_3px_0_0_0_#8a9a6a,inset_0_2px_0_0_#8a9a6a,inset_0_-2px_0_0_#8a9a6a]"
+  /** Left accent rail uses theme tokens (Base = accent, Exp = accent-secondary). */
+  const frameClass = isExpansion
+    ? "border-border border-l-[3px] border-l-accent-secondary bg-surface-card"
     : knownSubtype
-      ? "shadow-[inset_3px_0_0_0_#c47a3a,inset_0_2px_0_0_#c47a3a,inset_0_-2px_0_0_#c47a3a]"
-      : "";
-
-  const borderClass = isExpansion
-    ? "border-accent-secondary-muted/50"
-    : knownSubtype
-      ? "border-accent-muted/45"
-      : "border-border";
+      ? "border-border border-l-[3px] border-l-accent bg-surface-card"
+      : "border-border bg-surface-card";
 
   if (variant === "featured") {
     return (
       <div
-        className={`overflow-hidden rounded-2xl border bg-surface-card text-left ${borderClass} ${frameShadow}`}
+        className={`overflow-hidden rounded-2xl border text-left shadow-sm shadow-black/20 ${frameClass}`}
       >
         <div className="relative aspect-square w-full bg-surface-raised sm:aspect-[4/3]">
           <img src={cover} alt={name} className="h-full w-full object-cover" />
@@ -286,7 +281,7 @@ export function GameCard({
 
   return (
     <div
-      className={`flex gap-4 overflow-hidden rounded-xl border bg-surface-card p-3.5 ${borderClass} ${frameShadow}`}
+      className={`flex gap-4 overflow-hidden rounded-xl border p-3.5 shadow-sm shadow-black/20 ${frameClass}`}
     >
       <div className="relative shrink-0">
         <img

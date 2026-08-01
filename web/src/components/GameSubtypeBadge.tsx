@@ -1,4 +1,4 @@
-/** BGG collection subtypes → visual identity. */
+/** BGG collection subtypes → visual identity (theme tokens, solid on covers). */
 
 export type KnownGameSubtype = "boardgame" | "boardgameexpansion";
 
@@ -38,7 +38,10 @@ interface GameSubtypeBadgeProps {
   size?: "md" | "sm";
 }
 
-/** Circular subtype badge (card-3 placement style, cartón y tinta colors). */
+/**
+ * Circular subtype badge — solid fill so it stays readable over cover art.
+ * Colors follow theme tokens (accent / accent-secondary).
+ */
 export function GameSubtypeBadge({
   subtype,
   className = "",
@@ -52,8 +55,8 @@ export function GameSubtypeBadge({
   const shortLabel = isExpansion ? "EXP" : "BASE";
 
   const palette = isExpansion
-    ? "border-accent-secondary/50 bg-accent-secondary text-surface shadow-accent-secondary/40"
-    : "border-accent/50 bg-accent text-surface shadow-accent/40";
+    ? "border-accent-secondary bg-accent-secondary text-surface"
+    : "border-accent bg-accent text-surface";
 
   const box = size === "sm" ? "h-7 w-7" : "h-11 w-11";
   const icon = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
@@ -62,7 +65,7 @@ export function GameSubtypeBadge({
   return (
     <span
       title={label}
-      className={`inline-flex ${box} flex-col items-center justify-center rounded-full border-2 shadow-lg ${palette} ${className}`}
+      className={`inline-flex ${box} flex-col items-center justify-center rounded-full border-2 shadow-md shadow-black/40 ${palette} ${className}`}
     >
       {isExpansion ? (
         <ExpansionIcon className={icon} />

@@ -1,9 +1,7 @@
 import { Hono } from "hono";
 import { createBggClient } from "../../bgg/client.js";
-import {
-  loadConfig,
-  requireBggCredentials,
-} from "../../config/index.js";
+import { loadConfig } from "../../config/index.js";
+import { requireEffectiveBggCredentials } from "../../config/bgg-username.js";
 import { createStorageService } from "../../storage/index.js";
 import { syncCollection, syncPlays } from "../../sync/index.js";
 import { getDb } from "../context.js";
@@ -15,6 +13,7 @@ let syncInFlight = false;
 export interface SyncApiResult {
   ok: boolean;
   message?: string;
+  username?: string;
   collection?: { count: number; incremental: boolean };
   plays?: { count: number; incremental: boolean };
   durationMs: number;
@@ -56,12 +55,14 @@ syncRoutes.post("/", async (c) => {
   syncInFlight = true;
   try {
     const config = loadConfig();
-    const { token, username } = requireBggCredentials(config);
+    const db = getDb();
+    const { token, username } = requireEffectiveBggCredentials(db, config);
     const client = createBggClient(token);
-    const storage = createStorageService(getDb());
+    const storage = createStorageService(db);
 
     const result: SyncApiResult = {
       ok: true,
+      username,
       durationMs: 0,
     };
 

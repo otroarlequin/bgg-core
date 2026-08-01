@@ -1,4 +1,5 @@
-import { loadConfig, requireBggCredentials } from "../config/index.js";
+import { loadConfig } from "../config/index.js";
+import { requireEffectiveBggCredentials } from "../config/bgg-username.js";
 import { createBggClient } from "../bgg/index.js";
 import { createDatabase, createStorageService } from "../storage/index.js";
 import { syncPlays } from "../sync/index.js";
@@ -8,11 +9,12 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const full = getBooleanArg(args, "full");
   const config = loadConfig();
-  const { token, username } = requireBggCredentials(config);
+  const db = createDatabase(config.dbPath);
+  const { token, username, source } = requireEffectiveBggCredentials(db, config);
   const client = createBggClient(token);
-  const storage = createStorageService(createDatabase(config.dbPath));
+  const storage = createStorageService(db);
 
-  console.log(`Sincronizando partidas de ${username}...`);
+  console.log(`Sincronizando partidas de ${username} (fuente: ${source})...`);
   const result = await syncPlays(storage, client, username, {
     incremental: !full,
   });

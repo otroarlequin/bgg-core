@@ -19,22 +19,65 @@ import type {
   SmartWishlistMode,
   HotnessScoutResult,
   SyncApiResult,
+  AppSettings,
+  UpdateSettingsResult,
 } from "./types";
+
+export class ApiError extends Error {
+  status: number;
+  body: unknown;
+
+  constructor(status: number, message: string, body?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
+  const text = await res.text();
+  const contentType = res.headers.get("content-type") ?? "";
+  const looksHtml =
+    contentType.includes("text/html") ||
+    /^\s*<(!doctype|html)/i.test(text);
+
   if (!res.ok) {
-    const text = await res.text();
     let message = text || `HTTP ${res.status}`;
-    try {
-      const parsed = JSON.parse(text) as { message?: string };
-      if (parsed.message) message = parsed.message;
-    } catch {
-      // keep text
+    let body: unknown;
+    if (looksHtml) {
+      message = `HTTP ${res.status} (HTML en lugar de JSON). ¿API desactualizada? Reinicia el servidor.`;
+    } else {
+      try {
+        body = JSON.parse(text) as { message?: string };
+        if (
+          body &&
+          typeof body === "object" &&
+          "message" in body &&
+          typeof (body as { message?: unknown }).message === "string"
+        ) {
+          message = (body as { message: string }).message;
+        }
+      } catch {
+        // keep text
+      }
     }
-    throw new Error(message);
+    throw new ApiError(res.status, message, body);
   }
-  return res.json() as Promise<T>;
+
+  if (looksHtml) {
+    throw new ApiError(
+      res.status,
+      `La API devolvió HTML en ${url}. Reinicia el servidor local (npm run dev:api) o despliega la versión nueva.`,
+    );
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(res.status, `JSON inválido desde ${url}`);
+  }
 }
 
 function toQuery(params: object): string {
@@ -182,6 +225,21 @@ export function triggerSync(params: {
 } = {}): Promise<SyncApiResult> {
   return fetchJson("/api/sync", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+}
+
+export function fetchSettings(): Promise<AppSettings> {
+  return fetchJson("/api/settings");
+}
+
+export function updateSettings(params: {
+  bggUsername: string;
+  confirmReplace?: boolean;
+}): Promise<UpdateSettingsResult> {
+  return fetchJson("/api/settings", {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   });
