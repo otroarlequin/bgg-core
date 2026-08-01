@@ -137,11 +137,12 @@ Deploy **separado** del core personal: no monta el volumen `/data` de `bgg-core`
 
 ```bash
 fly apps create bgg-profile
+fly volumes create bgg_profile_sessions --region lax --size 1 -a bgg-profile
 fly secrets set BGG_TOKEN="tu-token" -a bgg-profile
 fly deploy -c fly.profile.toml -a bgg-profile
 ```
 
 - Dockerfile: `Dockerfile.profile` → `node dist/api/profile-server.js`
-- Secrets: `BGG_TOKEN` (obligatorio). No uses el volumen ni la DB de la app personal.
+- Secrets: `BGG_TOKEN` (obligatorio). Volumen propio `bgg_profile_sessions` → `/data` (sesiones); no el de `bgg-core`.
 - Rate limit: creaciones de sesión por IP; tope global de sesiones concurrentes.
-- Local: `npm run dev:profile:all` y abre `http://localhost:5173/profile`.
+- Local: `npm run dev:profile:all` y abre `http://localhost:5174/profile`.

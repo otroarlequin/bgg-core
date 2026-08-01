@@ -61,6 +61,23 @@ export function ProfileApp() {
     };
   }, []);
 
+  useEffect(() => {
+    function onSessionLost(ev: Event) {
+      const detail = (ev as CustomEvent<{ message?: string }>).detail;
+      setSession(null);
+      setLastSync(null);
+      void queryClient.clear();
+      setError(
+        detail?.message ??
+          "La sesión temporal se perdió (reinicio del servidor o expiración). Vuelve a entrar.",
+      );
+    }
+    window.addEventListener("bgg-profile-session-lost", onSessionLost);
+    return () => {
+      window.removeEventListener("bgg-profile-session-lost", onSessionLost);
+    };
+  }, [queryClient]);
+
   async function handleStart(e: FormEvent) {
     e.preventDefault();
     const next = username.trim();

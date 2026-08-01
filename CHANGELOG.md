@@ -18,6 +18,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Fixed
 - `decodeHtmlEntities` / `stripHtmlToText` toleran payloads BGG no-string (evita `text.replace is not a function` al sincronizar plays/things).
+- Profile en Fly: sesiones persistidas en volumen (`/data/sessions`) para sobrevivir reinicios; más RAM y grace period de health; UI vuelve al login si llega un 401 de sesión.
 
 ## [0.2.0] — 2026-07-31
 

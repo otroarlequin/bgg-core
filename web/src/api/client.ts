@@ -73,6 +73,11 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
         // keep text
       }
     }
+    if (isProfileMode() && res.status === 401) {
+      window.dispatchEvent(
+        new CustomEvent("bgg-profile-session-lost", { detail: { message } }),
+      );
+    }
     throw new ApiError(res.status, message, body);
   }
 

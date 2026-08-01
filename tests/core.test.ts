@@ -77,6 +77,29 @@ describe("mapPlayItem name shapes", () => {
   });
 });
 
+describe("profile session store disk restore", () => {
+  it("reloads session from meta.json when RAM map is empty", async () => {
+    const { existsSync } = await import("node:fs");
+    const dir = mkdtempSync(join(tmpdir(), "bgg-profile-sess-"));
+    process.env.PROFILE_SESSIONS_DIR = dir;
+    const store = await import("../src/profile/session-store.js");
+
+    const created = store.createProfileSession("supermilox");
+    const metaFile = join(dir, `${created.id}.meta.json`);
+    expect(existsSync(metaFile)).toBe(true);
+
+    store.__resetMemoryForTests();
+    const again = store.getProfileSession(created.id);
+    expect(again?.id).toBe(created.id);
+    expect(again?.username).toBe("supermilox");
+    expect(existsSync(created.dbPath)).toBe(true);
+
+    store.destroyProfileSession(created.id);
+    expect(store.getProfileSession(created.id)).toBeNull();
+    expect(existsSync(metaFile)).toBe(false);
+  });
+});
+
 describe("mapThingItemToGame language dependence", () => {
   it("extracts winning poll level from nested results array", async () => {
     const { mapThingItemToGame } = await import("../src/bgg/mappers.js");

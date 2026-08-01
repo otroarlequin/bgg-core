@@ -1,5 +1,13 @@
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, rmSync, unlinkSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { createDatabase, type Db } from "../storage/database.js";
 
@@ -37,6 +45,47 @@ function sessionsRoot(): string {
   return root;
 }
 
+function metaPath(id: string): string {
+  return join(sessionsRoot(), `${id}.meta.json`);
+}
+
+function writeSessionMeta(session: ProfileSession): void {
+  writeFileSync(metaPath(session.id), JSON.stringify(session), "utf8");
+}
+
+function readSessionMeta(id: string): ProfileSession | null {
+  const path = metaPath(id);
+  if (!existsSync(path)) return null;
+  try {
+    const raw = JSON.parse(readFileSync(path, "utf8")) as ProfileSession;
+    if (
+      !raw ||
+      typeof raw.id !== "string" ||
+      typeof raw.username !== "string" ||
+      typeof raw.dbPath !== "string" ||
+      typeof raw.createdAt !== "number" ||
+      typeof raw.lastAccessAt !== "number"
+    ) {
+      return null;
+    }
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+function listSessionMetas(): ProfileSession[] {
+  const root = sessionsRoot();
+  const out: ProfileSession[] = [];
+  for (const name of readdirSync(root)) {
+    if (!name.endsWith(".meta.json")) continue;
+    const id = name.slice(0, -".meta.json".length);
+    const meta = readSessionMeta(id);
+    if (meta) out.push(meta);
+  }
+  return out;
+}
+
 function pruneRateBucket(bucket: RateBucket, windowMs: number): void {
   const cutoff = Date.now() - windowMs;
   bucket.timestamps = bucket.timestamps.filter((t) => t >= cutoff);
@@ -58,9 +107,14 @@ export function assertCanCreateSession(ip: string): void {
   bucket.timestamps.push(Date.now());
 }
 
+function activeSessionCount(): number {
+  purgeExpiredSessions();
+  return listSessionMetas().length;
+}
+
 export function createProfileSession(username: string): ProfileSession {
   purgeExpiredSessions();
-  if (sessions.size >= MAX_SESSIONS_GLOBAL) {
+  if (activeSessionCount() >= MAX_SESSIONS_GLOBAL) {
     throw new Error(
       "Hay demasiadas sesiones temporales activas. Intenta en unos minutos.",
     );
@@ -82,17 +136,31 @@ export function createProfileSession(username: string): ProfileSession {
     lastAccessAt: now,
   };
   sessions.set(id, session);
+  writeSessionMeta(session);
   return session;
 }
 
+/**
+ * Resolve session by id. Reloads from disk after process/machine restart
+ * so Fly auto-stop / OOM does not orphan a still-valid cookie.
+ */
 export function getProfileSession(id: string): ProfileSession | null {
-  const session = sessions.get(id);
+  let session = sessions.get(id) ?? readSessionMeta(id);
   if (!session) return null;
+
+  if (!existsSync(session.dbPath)) {
+    destroyProfileSession(id);
+    return null;
+  }
+
   if (Date.now() - session.lastAccessAt > PROFILE_SESSION_TTL_MS) {
     destroyProfileSession(id);
     return null;
   }
+
   session.lastAccessAt = Date.now();
+  sessions.set(id, session);
+  writeSessionMeta(session);
   return session;
 }
 
@@ -106,7 +174,7 @@ export function getSessionDb(session: ProfileSession): Db {
 }
 
 export function destroyProfileSession(id: string): void {
-  const session = sessions.get(id);
+  const session = sessions.get(id) ?? readSessionMeta(id);
   const db = openDbs.get(id);
   if (db) {
     try {
@@ -117,6 +185,16 @@ export function destroyProfileSession(id: string): void {
     openDbs.delete(id);
   }
   sessions.delete(id);
+
+  const meta = metaPath(id);
+  if (existsSync(meta)) {
+    try {
+      unlinkSync(meta);
+    } catch {
+      // ignore
+    }
+  }
+
   if (session?.dbPath && existsSync(session.dbPath)) {
     try {
       unlinkSync(session.dbPath);
@@ -142,14 +220,30 @@ export function destroyProfileSession(id: string): void {
 
 export function purgeExpiredSessions(): void {
   const now = Date.now();
+  const seen = new Set<string>();
+
   for (const [id, session] of sessions) {
+    seen.add(id);
     if (now - session.lastAccessAt > PROFILE_SESSION_TTL_MS) {
       destroyProfileSession(id);
     }
   }
+
+  for (const meta of listSessionMetas()) {
+    if (seen.has(meta.id)) continue;
+    if (now - meta.lastAccessAt > PROFILE_SESSION_TTL_MS) {
+      destroyProfileSession(meta.id);
+    } else if (!existsSync(meta.dbPath)) {
+      destroyProfileSession(meta.id);
+    } else {
+      sessions.set(meta.id, meta);
+    }
+  }
 }
 
-export function getSessionCookieValue(cookieHeader: string | undefined): string | null {
+export function getSessionCookieValue(
+  cookieHeader: string | undefined,
+): string | null {
   if (!cookieHeader) return null;
   const parts = cookieHeader.split(";");
   for (const part of parts) {
@@ -170,4 +264,17 @@ export function sessionPublicView(session: ProfileSession) {
     expiresAt: new Date(expiresAt).toISOString(),
     ttlMs: PROFILE_SESSION_TTL_MS,
   };
+}
+
+/** Test helper: drop in-memory maps without deleting disk files. */
+export function __resetMemoryForTests(): void {
+  for (const db of openDbs.values()) {
+    try {
+      db.close();
+    } catch {
+      // ignore
+    }
+  }
+  openDbs.clear();
+  sessions.clear();
 }

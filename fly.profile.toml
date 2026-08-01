@@ -12,7 +12,8 @@ primary_region = 'lax'
   HOST = '0.0.0.0'
   PORT = '3001'
   APP_MODE = 'profile'
-  PROFILE_SESSIONS_DIR = '/tmp/bgg-profile-sessions'
+  # Durable across machine stop/start (not /tmp).
+  PROFILE_SESSIONS_DIR = '/data/sessions'
   WEB_ROOT = '/app/web/dist'
 
 [http_service]
@@ -26,11 +27,16 @@ primary_region = 'lax'
   [[http_service.checks]]
     interval = '30s'
     timeout = '5s'
-    grace_period = '20s'
+    # Long syncs (collection+plays+things) can peg CPU; avoid early kill.
+    grace_period = '5m'
     method = 'GET'
     path = '/api/health'
 
+[[mounts]]
+  source = 'bgg_profile_sessions'
+  destination = '/data'
+
 [[vm]]
-  memory = '512mb'
+  memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
