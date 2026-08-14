@@ -266,14 +266,118 @@ export interface ProfileSessionView {
   lastAccessAt: string;
   expiresAt: string;
   ttlMs: number;
+  lastSyncAt?: string | null;
+  lastSyncOk?: boolean | null;
+  lastSyncError?: string | null;
+  lastSyncDurationMs?: number | null;
+}
+
+export interface ProfileAdminSessionView {
+  id: string;
+  idShort: string;
+  username: string;
+  createdAt: string;
+  lastAccessAt: string;
+  expiresAt: string;
+  lastSyncAt: string | null;
+  lastSyncOk: boolean | null;
+  lastSyncError: string | null;
+  lastSyncDurationMs: number | null;
+  dbBytes: number | null;
+}
+
+async function readProfileNdjsonStream(
+  res: Response,
+  onProgress?: (event: ProfileSyncProgress) => void,
+): Promise<{
+  ok: boolean;
+  message?: string;
+  session?: ProfileSessionView;
+  sync?: ProfileSyncResult;
+}> {
+  if (!res.body) {
+    throw new ApiError(res.status, "Respuesta de sync sin cuerpo.");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let final: {
+    ok: boolean;
+    message?: string;
+    session?: ProfileSessionView;
+    sync?: ProfileSyncResult;
+  } | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      let msg: {
+        type?: string;
+        ok?: boolean;
+        message?: string;
+        session?: ProfileSessionView;
+        sync?: ProfileSyncResult;
+        stage?: ProfileSyncProgress["stage"];
+        label?: string;
+        percent?: number;
+      };
+      try {
+        msg = JSON.parse(trimmed) as typeof msg;
+      } catch {
+        continue;
+      }
+      if (
+        msg.type === "progress" &&
+        msg.stage &&
+        msg.label != null &&
+        msg.percent != null
+      ) {
+        onProgress?.({
+          type: "progress",
+          stage: msg.stage,
+          label: msg.label,
+          percent: msg.percent,
+        });
+      } else if (msg.type === "done") {
+        final = {
+          ok: msg.ok !== false,
+          session: msg.session,
+          sync: msg.sync,
+        };
+      } else if (msg.type === "error") {
+        throw new ApiError(400, msg.message ?? "Sync falló");
+      }
+    }
+  }
+
+  if (!final) {
+    throw new ApiError(500, "Sync incompleto: no llegó el evento final.");
+  }
+  return final;
 }
 
 export interface ProfileSyncResult {
   username: string;
   collection: { count: number; incremental: boolean };
-  plays: { count: number; incremental: boolean };
+  plays: { count: number; incremental: boolean; pages?: number };
   things: { requested: number; synced: number; skipped: number };
   durationMs: number;
+  playsMindate?: string | null;
+  thingsScope?: "priority" | "all";
+}
+
+export interface ProfileSyncProgress {
+  type: "progress";
+  stage: "session" | "collection" | "plays" | "things" | "done";
+  label: string;
+  percent: number;
 }
 
 export function fetchProfileSession(): Promise<{
@@ -283,19 +387,89 @@ export function fetchProfileSession(): Promise<{
   return fetchJson("/api/profile/session");
 }
 
-export function createProfileSession(username: string): Promise<{
+export async function createProfileSession(
+  username: string,
+  onProgress?: (event: ProfileSyncProgress) => void,
+): Promise<{
   ok: boolean;
   message?: string;
   session?: ProfileSessionView;
   sync?: ProfileSyncResult;
 }> {
-  return fetchJson("/api/profile/session", {
+  const res = await fetch("/api/profile/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({ username }),
   });
+
+  const contentType = res.headers.get("content-type") ?? "";
+
+  // Non-stream error (validation / rate limit) as JSON.
+  if (!res.ok && !contentType.includes("ndjson")) {
+    const text = await res.text();
+    let message = text || `HTTP ${res.status}`;
+    try {
+      const parsed = JSON.parse(text) as { message?: string };
+      if (parsed.message) message = parsed.message;
+    } catch {
+      // keep
+    }
+    throw new ApiError(res.status, message);
+  }
+
+  return readProfileNdjsonStream(res, onProgress);
+}
+
+/** Re-sync the active profile session (keeps data on partial failure). */
+export async function syncProfileSession(
+  onProgress?: (event: ProfileSyncProgress) => void,
+): Promise<{
+  ok: boolean;
+  message?: string;
+  session?: ProfileSessionView;
+  sync?: ProfileSyncResult;
+}> {
+  const res = await fetch("/api/profile/sync", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  const contentType = res.headers.get("content-type") ?? "";
+
+  if (!res.ok && !contentType.includes("ndjson")) {
+    const text = await res.text();
+    let message = text || `HTTP ${res.status}`;
+    try {
+      const parsed = JSON.parse(text) as { message?: string };
+      if (parsed.message) message = parsed.message;
+    } catch {
+      // keep
+    }
+    throw new ApiError(res.status, message);
+  }
+
+  return readProfileNdjsonStream(res, onProgress);
 }
 
 export function endProfileSession(): Promise<{ ok: boolean }> {
   return fetchJson("/api/profile/session", { method: "DELETE" });
+}
+
+export function fetchProfileAdminSessions(
+  password: string,
+): Promise<{ sessions: ProfileAdminSessionView[] }> {
+  return fetchJson("/api/profile/admin/sessions", {
+    headers: { "x-profile-admin-password": password },
+  });
+}
+
+export function killProfileAdminSession(
+  password: string,
+  id: string,
+): Promise<{ ok: boolean }> {
+  return fetchJson(`/api/profile/admin/sessions/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { "x-profile-admin-password": password },
+  });
 }

@@ -96,6 +96,17 @@ export function getDistinctCollectionBggIds(db: Db): number[] {
   return rows.map((r) => r.bgg_id);
 }
 
+/** IDs needed for a useful profile session (owned + shortlist flags). */
+export function getProfilePriorityBggIds(db: Db): number[] {
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT bgg_id FROM collection_entries
+       WHERE own = 1 OR wishlist = 1 OR want_to_play = 1 OR preordered = 1`,
+    )
+    .all() as Array<{ bgg_id: number }>;
+  return rows.map((r) => r.bgg_id);
+}
+
 export function getCollectionEntryByBggId(
   db: Db,
   bggId: number,

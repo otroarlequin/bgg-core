@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CollectionEntry, Play, PlayPlayer } from "../src/domain/types.js";
 import { createQueryService } from "../src/query/index.js";
 import { createDatabase, createStorageService } from "../src/storage/index.js";
@@ -78,6 +78,15 @@ describe("mapPlayItem name shapes", () => {
 });
 
 describe("profile session store disk restore", () => {
+  it("default idle TTL is 30 days", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bgg-profile-ttl-"));
+    process.env.PROFILE_SESSIONS_DIR = dir;
+    delete process.env.PROFILE_SESSION_TTL_DAYS;
+    vi.resetModules();
+    const store = await import("../src/profile/session-store.js");
+    expect(store.PROFILE_SESSION_TTL_MS).toBe(30 * 24 * 60 * 60 * 1000);
+  });
+
   it("reloads session from meta.json when RAM map is empty", async () => {
     const { existsSync } = await import("node:fs");
     const dir = mkdtempSync(join(tmpdir(), "bgg-profile-sess-"));
@@ -97,6 +106,71 @@ describe("profile session store disk restore", () => {
     store.destroyProfileSession(created.id);
     expect(store.getProfileSession(created.id)).toBeNull();
     expect(existsSync(metaFile)).toBe(false);
+  });
+
+  it("persists lastSyncError across memory reset", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bgg-profile-meta-"));
+    process.env.PROFILE_SESSIONS_DIR = dir;
+    vi.resetModules();
+    const store = await import("../src/profile/session-store.js");
+
+    const created = store.createProfileSession("alice");
+    store.updateSessionSyncMeta(created.id, {
+      lastSyncAt: new Date().toISOString(),
+      lastSyncOk: false,
+      lastSyncError: "BGG timeout mid-plays",
+      lastSyncDurationMs: 1200,
+    });
+
+    store.__resetMemoryForTests();
+    const again = store.getProfileSession(created.id);
+    expect(again?.lastSyncOk).toBe(false);
+    expect(again?.lastSyncError).toBe("BGG timeout mid-plays");
+    expect(again?.lastSyncDurationMs).toBe(1200);
+
+    store.destroyProfileSession(created.id);
+  });
+
+  it("rejects creating beyond PROFILE_MAX_SESSIONS with server-full message", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bgg-profile-quota-"));
+    process.env.PROFILE_SESSIONS_DIR = dir;
+    process.env.PROFILE_MAX_SESSIONS = "2";
+    vi.resetModules();
+    const store = await import("../src/profile/session-store.js");
+
+    const a = store.createProfileSession("u1");
+    const b = store.createProfileSession("u2");
+    expect(() => store.createProfileSession("u3")).toThrow(
+      /Servidor lleno/,
+    );
+
+    store.destroyProfileSession(a.id);
+    store.destroyProfileSession(b.id);
+    delete process.env.PROFILE_MAX_SESSIONS;
+  });
+
+  it("keeps session after recording sync error (no destroy)", async () => {
+    const { existsSync } = await import("node:fs");
+    const dir = mkdtempSync(join(tmpdir(), "bgg-profile-partial-"));
+    process.env.PROFILE_SESSIONS_DIR = dir;
+    vi.resetModules();
+    const store = await import("../src/profile/session-store.js");
+
+    const created = store.createProfileSession("bob");
+    const dbPath = created.dbPath;
+    // Simulate POST /sync failure path: meta error, session untouched.
+    store.updateSessionSyncMeta(created.id, {
+      lastSyncOk: false,
+      lastSyncError: "partial failure",
+    });
+    const still = store.getProfileSession(created.id);
+    expect(still?.id).toBe(created.id);
+    expect(existsSync(dbPath)).toBe(true);
+    expect(store.sessionPublicView(still!).lastSyncError).toBe(
+      "partial failure",
+    );
+
+    store.destroyProfileSession(created.id);
   });
 });
 

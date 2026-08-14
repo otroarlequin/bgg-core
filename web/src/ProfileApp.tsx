@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
@@ -6,6 +6,7 @@ import {
   endProfileSession,
   fetchProfileSession,
   type ProfileSessionView,
+  type ProfileSyncProgress,
   type ProfileSyncResult,
 } from "./api/client";
 import {
@@ -22,6 +23,8 @@ export function ProfileApp() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<ProfileSyncResult | null>(null);
+  const [progress, setProgress] = useState<ProfileSyncProgress | null>(null);
+  const startingLock = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +69,7 @@ export function ProfileApp() {
       const detail = (ev as CustomEvent<{ message?: string }>).detail;
       setSession(null);
       setLastSync(null);
+      setProgress(null);
       void queryClient.clear();
       setError(
         detail?.message ??
@@ -80,23 +84,35 @@ export function ProfileApp() {
 
   async function handleStart(e: FormEvent) {
     e.preventDefault();
+    if (startingLock.current) return;
     const next = username.trim();
     if (!next) {
       setError("Indica tu username de BoardGameGeek.");
       return;
     }
+    startingLock.current = true;
     setStarting(true);
     setError(null);
     setLastSync(null);
+    setProgress({
+      type: "progress",
+      stage: "session",
+      label: "Preparando sesión…",
+      percent: 2,
+    });
     try {
-      const result = await createProfileSession(next);
+      const result = await createProfileSession(next, (event) => {
+        setProgress(event);
+      });
       if (!result.ok || !result.session) {
         setError(result.message ?? "No se pudo crear la sesión.");
+        setProgress(null);
         return;
       }
       setStoredProfileUsername(next);
       setSession(result.session);
       setLastSync(result.sync ?? null);
+      setProgress(null);
       await queryClient.invalidateQueries();
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Error al sincronizar";
@@ -110,7 +126,9 @@ export function ProfileApp() {
           ? `${raw} — Arranca la API profile: npm run dev:profile (puerto 3002) o npm run dev:profile:all`
           : raw,
       );
+      setProgress(null);
     } finally {
+      startingLock.current = false;
       setStarting(false);
     }
   }
@@ -123,6 +141,7 @@ export function ProfileApp() {
     }
     setSession(null);
     setLastSync(null);
+    setProgress(null);
     await queryClient.clear();
   }
 
@@ -135,6 +154,7 @@ export function ProfileApp() {
   }
 
   if (!session) {
+    const percent = Math.max(0, Math.min(100, progress?.percent ?? 0));
     return (
       <div className="min-h-screen bg-surface">
         <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 py-16">
@@ -146,16 +166,16 @@ export function ProfileApp() {
               Explora tu colección
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-muted">
-              Indica tu username de BoardGameGeek. Sincronizaremos colección,
-              partidas y metadatos en una sesión temporal (unas 6 horas de
-              inactividad). No se guarda una cuenta durable ni se mezclan datos
-              con otros visitantes.
+              Indica tu username de BoardGameGeek. Sincronizamos colección,
+              partidas del último año y metadatos prioritarios en una sesión
+              temporal (hasta 30 días de inactividad).
             </p>
           </div>
 
           <form
             onSubmit={(e) => void handleStart(e)}
             className="space-y-4 rounded-xl border border-border bg-surface-raised/50 p-5"
+            aria-busy={starting}
           >
             <div>
               <label
@@ -170,19 +190,46 @@ export function ProfileApp() {
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
                 spellCheck={false}
-                className="mt-1 w-full rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                className="mt-1 w-full rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-60"
                 placeholder="tu-usuario-bgg"
                 disabled={starting}
               />
             </div>
+
+            {starting || progress ? (
+              <div className="space-y-2" aria-live="polite">
+                <div className="flex items-center justify-between gap-3 text-xs text-muted">
+                  <span>{progress?.label ?? "Sincronizando…"}</span>
+                  <span className="tabular-nums text-ink-soft">
+                    {percent.toFixed(0)}%
+                  </span>
+                </div>
+                <div
+                  className="h-2 overflow-hidden rounded-full bg-surface-card"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(percent)}
+                  aria-label="Progreso de sincronización"
+                >
+                  <div
+                    className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-dim">
+                  No cierres esta pestaña. El primer sync puede tardar un poco
+                  según el tamaño de tu colección.
+                </p>
+              </div>
+            ) : null}
+
             <button
               type="submit"
               disabled={starting || !username.trim()}
-              className="min-h-11 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-ink hover:bg-accent-hover disabled:opacity-50"
+              className="min-h-11 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-ink hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {starting
-                ? "Sincronizando (puede tardar)…"
-                : "Entrar y sincronizar"}
+              {starting ? "Sincronizando…" : "Entrar y sincronizar"}
             </button>
             {error ? <p className="text-sm text-red-400">{error}</p> : null}
           </form>

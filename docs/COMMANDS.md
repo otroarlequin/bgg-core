@@ -18,6 +18,20 @@ npm run dev:profile:all  # API profile :3002 + Vite :5174 → http://localhost:5
 
 > Si dejas `npm run dev` (personal) en :5173, **no** uses esa URL para profile: abre **http://localhost:5174/profile**.
 
+### Profile: política de sesión y admin
+
+| Variable | Default | Uso |
+|----------|---------|-----|
+| `PROFILE_SESSION_TTL_DAYS` | `30` | Idle TTL (días) |
+| `PROFILE_MAX_SESSIONS` | `10` | Tope de sesiones en disco |
+| `PROFILE_PLAYS_YEARS` | `1` | Años de partidas en sync |
+| `PROFILE_ADMIN_PASSWORD` | — | Admin oculto; sin valor → 404 |
+| `PROFILE_SESSIONS_DIR` | `data/profile-sessions` | Directorio de sesiones |
+
+- Re-sync: Configuración → **Actualizar con BGG** (mismo progreso NDJSON que el login).
+- Admin: `http://localhost:5174/profile/admin` (password en sessionStorage de la pestaña).
+- Fly: `fly secrets set PROFILE_ADMIN_PASSWORD=… -a bgg-profile`
+
 ## Sync con BoardGameGeek
 
 Refresca colección y partidas **en la instancia donde estés** (local o Fly). No toca duels ni purchase reviews.

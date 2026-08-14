@@ -12,13 +12,13 @@ export async function syncPlays(
   storage: StorageService,
   client: BggClient,
   username: string,
-  options: { incremental?: boolean } = {},
+  options: { incremental?: boolean; mindate?: string } = {},
 ): Promise<SyncPlaysResult> {
   const incremental = options.incremental ?? true;
   const previous = storage.syncState.getSyncState(storage.db, "plays");
 
-  let mindate: string | undefined;
-  if (incremental && previous?.lastSyncedAt) {
+  let mindate: string | undefined = options.mindate;
+  if (!mindate && incremental && previous?.lastSyncedAt) {
     mindate = subtractDays(previous.lastSyncedAt.slice(0, 10), 1);
   }
 

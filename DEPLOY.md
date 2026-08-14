@@ -133,16 +133,22 @@ Con `min_machines_running = 0` la máquina puede apagarse en idle (cold start de
 
 ## App pública Profile (visitantes)
 
-Deploy **separado** del core personal: no monta el volumen `/data` de `bgg-core`. Cada visitante obtiene una SQLite temporal (TTL 6 h) tras indicar su username BGG en `/profile`.
+Deploy **separado** del core personal: no monta el volumen `/data` de `bgg-core`. Cada visitante obtiene una SQLite en el volumen de Profile tras indicar su username BGG en `/profile`.
+
+- **TTL:** 30 días desde la última actividad (`PROFILE_SESSION_TTL_DAYS`, default 30); cookie alineada. «Salir» borra la sesión.
+- **Partidas:** último 1 año (`PROFILE_PLAYS_YEARS=1`).
+- **Cuota:** máx. 10 sesiones almacenadas (`PROFILE_MAX_SESSIONS`). Si está lleno → 503 «servidor lleno…».
+- **Re-sync:** en Configuración → «Actualizar con BGG» (`POST /api/profile/sync`). Si falla a mitad, se conservan datos parciales y `lastSyncError`.
+- **Admin oculto:** `/profile/admin` + `GET|DELETE /api/profile/admin/sessions` con `PROFILE_ADMIN_PASSWORD` (header `x-profile-admin-password` o Basic). Sin password → 404.
 
 ```bash
 fly apps create bgg-profile
 fly volumes create bgg_profile_sessions --region lax --size 1 -a bgg-profile
-fly secrets set BGG_TOKEN="tu-token" -a bgg-profile
+fly secrets set BGG_TOKEN="tu-token" PROFILE_ADMIN_PASSWORD="elige-uno-fuerte" -a bgg-profile
 fly deploy -c fly.profile.toml -a bgg-profile
 ```
 
 - Dockerfile: `Dockerfile.profile` → `node dist/api/profile-server.js`
-- Secrets: `BGG_TOKEN` (obligatorio). Volumen propio `bgg_profile_sessions` → `/data` (sesiones); no el de `bgg-core`.
-- Rate limit: creaciones de sesión por IP; tope global de sesiones concurrentes.
-- Local: `npm run dev:profile:all` y abre `http://localhost:5174/profile`.
+- Secrets: `BGG_TOKEN` (obligatorio), `PROFILE_ADMIN_PASSWORD` (admin). Volumen propio `bgg_profile_sessions` → `/data` (sesiones); no el de `bgg-core`.
+- Rate limit: creaciones de sesión por IP; tope global de sesiones concurrentes (default 10).
+- Local: `npm run dev:profile:all` y abre `http://localhost:5174/profile` (admin: `…/profile/admin`).

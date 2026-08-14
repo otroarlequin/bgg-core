@@ -8,13 +8,16 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
-- **BGG Profile** (deploy aparte): sesión efímera por visitante (`/profile`), sync collection+plays+things, TTL 6h, rate limit, SQLite temporal; duel y validador sin persistencia durable; `Dockerfile.profile` + `fly.profile.toml`.
+- **BGG Profile** (deploy aparte): sesión por visitante (`/profile`), sync collection+plays+things, rate limit, SQLite en volumen; duel y validador sin persistencia durable; `Dockerfile.profile` + `fly.profile.toml`.
 - Scripts locales `dev:profile` / `dev:profile:all` (API `:3002` + Vite `:5174`).
+- Profile **Actualizar con BGG** (`POST /api/profile/sync` NDJSON) desde Configuración; fallo parcial conserva datos y `lastSyncError`.
+- Profile **admin oculto** (`/profile/admin` + API list/kill) con `PROFILE_ADMIN_PASSWORD`.
 
 ### Changed
 - Contexto de DB por request (`AsyncLocalStorage`) para aislar sesiones profile del core personal.
 - Validador: `persist: false` / `APP_MODE=profile` bloquea save y wishlist durable.
 - Proxy Vite: rutas desde `/profile` van a la API profile; stub claro en la API personal si falta `:3002`.
+- **Profile:** TTL idle **30 días** (`PROFILE_SESSION_TTL_DAYS`); cuota **10** sesiones; partidas **1 año** (`PROFILE_PLAYS_YEARS`); things solo prioritarios; progreso NDJSON + barra en la UI.
 
 ### Fixed
 - `decodeHtmlEntities` / `stripHtmlToText` toleran payloads BGG no-string (evita `text.replace is not a function` al sincronizar plays/things).

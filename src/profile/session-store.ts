@@ -5,6 +5,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -13,13 +14,24 @@ import { createDatabase, type Db } from "../storage/database.js";
 
 export const PROFILE_SESSION_COOKIE = "bgg_profile_sid";
 
-/** Idle TTL: 6 hours since last activity. */
-export const PROFILE_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-const MAX_SESSIONS_GLOBAL = Number(process.env.PROFILE_MAX_SESSIONS ?? 40);
+function resolveTtlMs(): number {
+  const days = Number(process.env.PROFILE_SESSION_TTL_DAYS ?? 30);
+  const safeDays = Number.isFinite(days) && days > 0 ? days : 30;
+  return safeDays * DAY_MS;
+}
+
+/** Idle TTL since last activity (default 30 days). */
+export const PROFILE_SESSION_TTL_MS = resolveTtlMs();
+
+const MAX_SESSIONS_GLOBAL = Number(process.env.PROFILE_MAX_SESSIONS ?? 10);
 const MAX_CREATES_PER_IP_HOUR = Number(
   process.env.PROFILE_MAX_CREATES_PER_IP_HOUR ?? 5,
 );
+
+export const PROFILE_SERVER_FULL_MESSAGE =
+  "Servidor lleno: hay demasiadas sesiones activas. Vuelve más tarde o contacta al admin.";
 
 export interface ProfileSession {
   id: string;
@@ -27,6 +39,24 @@ export interface ProfileSession {
   dbPath: string;
   createdAt: number;
   lastAccessAt: number;
+  lastSyncAt?: string | null;
+  lastSyncOk?: boolean | null;
+  lastSyncError?: string | null;
+  lastSyncDurationMs?: number | null;
+}
+
+export interface ProfileSessionAdminView {
+  id: string;
+  idShort: string;
+  username: string;
+  createdAt: string;
+  lastAccessAt: string;
+  expiresAt: string;
+  lastSyncAt: string | null;
+  lastSyncOk: boolean | null;
+  lastSyncError: string | null;
+  lastSyncDurationMs: number | null;
+  dbBytes: number | null;
 }
 
 interface RateBucket {
@@ -91,6 +121,15 @@ function pruneRateBucket(bucket: RateBucket, windowMs: number): void {
   bucket.timestamps = bucket.timestamps.filter((t) => t >= cutoff);
 }
 
+function dbByteSize(dbPath: string): number | null {
+  try {
+    if (!existsSync(dbPath)) return null;
+    return statSync(dbPath).size;
+  } catch {
+    return null;
+  }
+}
+
 export function assertCanCreateSession(ip: string): void {
   const key = ip || "unknown";
   let bucket = createsByIp.get(key);
@@ -112,12 +151,14 @@ function activeSessionCount(): number {
   return listSessionMetas().length;
 }
 
+export function getMaxSessions(): number {
+  return MAX_SESSIONS_GLOBAL;
+}
+
 export function createProfileSession(username: string): ProfileSession {
   purgeExpiredSessions();
   if (activeSessionCount() >= MAX_SESSIONS_GLOBAL) {
-    throw new Error(
-      "Hay demasiadas sesiones temporales activas. Intenta en unos minutos.",
-    );
+    throw new Error(PROFILE_SERVER_FULL_MESSAGE);
   }
 
   const id = randomBytes(24).toString("hex");
@@ -126,7 +167,7 @@ export function createProfileSession(username: string): ProfileSession {
     .slice(0, 40);
   const hash = createHash("sha256").update(id).digest("hex").slice(0, 12);
   const dbPath = join(sessionsRoot(), `${safeUser}-${hash}.db`);
-  createDatabase(dbPath); // ensure schema
+  createDatabase(dbPath);
   const now = Date.now();
   const session: ProfileSession = {
     id,
@@ -134,6 +175,10 @@ export function createProfileSession(username: string): ProfileSession {
     dbPath,
     createdAt: now,
     lastAccessAt: now,
+    lastSyncAt: null,
+    lastSyncOk: null,
+    lastSyncError: null,
+    lastSyncDurationMs: null,
   };
   sessions.set(id, session);
   writeSessionMeta(session);
@@ -141,8 +186,7 @@ export function createProfileSession(username: string): ProfileSession {
 }
 
 /**
- * Resolve session by id. Reloads from disk after process/machine restart
- * so Fly auto-stop / OOM does not orphan a still-valid cookie.
+ * Resolve session by id. Reloads from disk after process/machine restart.
  */
 export function getProfileSession(id: string): ProfileSession | null {
   let session = sessions.get(id) ?? readSessionMeta(id);
@@ -164,6 +208,15 @@ export function getProfileSession(id: string): ProfileSession | null {
   return session;
 }
 
+/** Peek without touching lastAccess (for admin list). */
+export function peekProfileSession(id: string): ProfileSession | null {
+  const session = sessions.get(id) ?? readSessionMeta(id);
+  if (!session) return null;
+  if (!existsSync(session.dbPath)) return null;
+  if (Date.now() - session.lastAccessAt > PROFILE_SESSION_TTL_MS) return null;
+  return session;
+}
+
 export function getSessionDb(session: ProfileSession): Db {
   let db = openDbs.get(session.id);
   if (!db) {
@@ -171,6 +224,30 @@ export function getSessionDb(session: ProfileSession): Db {
     openDbs.set(session.id, db);
   }
   return db;
+}
+
+export function updateSessionSyncMeta(
+  id: string,
+  patch: {
+    lastSyncAt?: string | null;
+    lastSyncOk?: boolean | null;
+    lastSyncError?: string | null;
+    lastSyncDurationMs?: number | null;
+  },
+): ProfileSession | null {
+  const session = sessions.get(id) ?? readSessionMeta(id);
+  if (!session) return null;
+  if (patch.lastSyncAt !== undefined) session.lastSyncAt = patch.lastSyncAt;
+  if (patch.lastSyncOk !== undefined) session.lastSyncOk = patch.lastSyncOk;
+  if (patch.lastSyncError !== undefined) {
+    session.lastSyncError = patch.lastSyncError;
+  }
+  if (patch.lastSyncDurationMs !== undefined) {
+    session.lastSyncDurationMs = patch.lastSyncDurationMs;
+  }
+  sessions.set(id, session);
+  writeSessionMeta(session);
+  return session;
 }
 
 export function destroyProfileSession(id: string): void {
@@ -218,6 +295,29 @@ export function destroyProfileSession(id: string): void {
   }
 }
 
+export const killSession = destroyProfileSession;
+
+export function listAllSessions(): ProfileSessionAdminView[] {
+  purgeExpiredSessions();
+  const ttl = PROFILE_SESSION_TTL_MS;
+  return listSessionMetas()
+    .filter((s) => Date.now() - s.lastAccessAt <= ttl && existsSync(s.dbPath))
+    .sort((a, b) => b.lastAccessAt - a.lastAccessAt)
+    .map((s) => ({
+      id: s.id,
+      idShort: s.id.slice(0, 8),
+      username: s.username,
+      createdAt: new Date(s.createdAt).toISOString(),
+      lastAccessAt: new Date(s.lastAccessAt).toISOString(),
+      expiresAt: new Date(s.lastAccessAt + ttl).toISOString(),
+      lastSyncAt: s.lastSyncAt ?? null,
+      lastSyncOk: s.lastSyncOk ?? null,
+      lastSyncError: s.lastSyncError ?? null,
+      lastSyncDurationMs: s.lastSyncDurationMs ?? null,
+      dbBytes: dbByteSize(s.dbPath),
+    }));
+}
+
 export function purgeExpiredSessions(): void {
   const now = Date.now();
   const seen = new Set<string>();
@@ -263,6 +363,10 @@ export function sessionPublicView(session: ProfileSession) {
     lastAccessAt: new Date(session.lastAccessAt).toISOString(),
     expiresAt: new Date(expiresAt).toISOString(),
     ttlMs: PROFILE_SESSION_TTL_MS,
+    lastSyncAt: session.lastSyncAt ?? null,
+    lastSyncOk: session.lastSyncOk ?? null,
+    lastSyncError: session.lastSyncError ?? null,
+    lastSyncDurationMs: session.lastSyncDurationMs ?? null,
   };
 }
 

@@ -2,9 +2,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
+  fetchProfileSession,
   fetchSettings,
+  syncProfileSession,
   triggerSync,
   updateSettings,
+  type ProfileSyncProgress,
 } from "../api/client";
 import { AppModal } from "../components/AppModal";
 import { ThemeSelect } from "../components/ThemeSelect";
@@ -14,6 +17,162 @@ function sourceLabel(source: "db" | "env" | null): string {
   if (source === "db") return "guardado en la app";
   if (source === "env") return "variable de entorno / secret";
   return "sin configurar";
+}
+
+function ProfileSettingsSection() {
+  const queryClient = useQueryClient();
+  const sessionQuery = useQuery({
+    queryKey: ["profile-session"],
+    queryFn: fetchProfileSession,
+  });
+
+  const [syncing, setSyncing] = useState(false);
+  const [progress, setProgress] = useState<ProfileSyncProgress | null>(null);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const session = sessionQuery.data?.active ? sessionQuery.data.session : null;
+  const percent = Math.max(0, Math.min(100, progress?.percent ?? 0));
+
+  async function handleUpdate() {
+    setSyncing(true);
+    setSyncMessage(null);
+    setSyncError(null);
+    setProgress({
+      type: "progress",
+      stage: "session",
+      label: "Preparando actualización…",
+      percent: 2,
+    });
+    try {
+      const result = await syncProfileSession((event) => setProgress(event));
+      if (!result.ok) {
+        setSyncError(result.message ?? "Actualización falló");
+        setProgress(null);
+        await queryClient.invalidateQueries({ queryKey: ["profile-session"] });
+        return;
+      }
+      const parts: string[] = [];
+      if (result.sync?.collection) {
+        parts.push(`${result.sync.collection.count} juegos`);
+      }
+      if (result.sync?.plays) {
+        parts.push(`${result.sync.plays.count} partidas`);
+      }
+      if (result.sync?.durationMs != null) {
+        parts.push(`${(result.sync.durationMs / 1000).toFixed(1)}s`);
+      }
+      setSyncMessage(
+        parts.length > 0
+          ? `Actualizado: ${parts.join(" · ")}`
+          : "Actualización completada.",
+      );
+      setProgress(null);
+      await queryClient.invalidateQueries();
+      await queryClient.invalidateQueries({ queryKey: ["profile-session"] });
+    } catch (err) {
+      setSyncError(
+        err instanceof Error ? err.message : "Error al actualizar desde BGG",
+      );
+      setProgress(null);
+      await queryClient.invalidateQueries({ queryKey: ["profile-session"] });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
+        <h2 className="text-lg font-semibold text-ink">Configuración</h2>
+        <p className="mt-1 text-sm text-muted">
+          Sesión hasta 30 días de inactividad. Partidas del último año. Puedes
+          actualizar datos desde BGG sin cerrar la sesión.
+        </p>
+      </div>
+
+      <section className="rounded-xl border border-border bg-surface-raised/40 p-4">
+        <h3 className="text-sm font-semibold text-ink">Sincronización</h3>
+        <p className="mt-1 text-xs text-muted">
+          Vuelve a descargar colección, partidas (último año) y metadatos
+          prioritarios. Si falla a mitad, se conservan los datos ya escritos.
+        </p>
+
+        {sessionQuery.isLoading ? (
+          <p className="mt-4 text-sm text-muted">Cargando sesión…</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {session?.lastSyncAt ? (
+              <p className="text-xs text-muted">
+                Último sync:{" "}
+                <span className="text-ink-soft">
+                  {new Date(session.lastSyncAt).toLocaleString()}
+                </span>
+                {session.lastSyncOk === true ? (
+                  <span className="text-accent-secondary"> · OK</span>
+                ) : session.lastSyncOk === false ? (
+                  <span className="text-red-400"> · con error</span>
+                ) : null}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-dim">Sin registro de sync aún.</p>
+            )}
+            {(session?.lastSyncError || syncError) && (
+              <p className="text-sm text-red-400">
+                {syncError ?? session?.lastSyncError}
+              </p>
+            )}
+
+            {syncing || progress ? (
+              <div className="space-y-2" aria-live="polite">
+                <div className="flex items-center justify-between gap-3 text-xs text-muted">
+                  <span>{progress?.label ?? "Actualizando…"}</span>
+                  <span className="tabular-nums text-ink-soft">
+                    {percent.toFixed(0)}%
+                  </span>
+                </div>
+                <div
+                  className="h-2 overflow-hidden rounded-full bg-surface-card"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(percent)}
+                  aria-label="Progreso de actualización"
+                >
+                  <div
+                    className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => void handleUpdate()}
+              disabled={syncing || !session}
+              className="min-h-11 rounded-lg border border-border bg-surface-card px-4 py-2 text-sm font-medium text-accent hover:border-accent/50 hover:bg-surface disabled:opacity-50 md:min-h-0"
+            >
+              {syncing ? "Actualizando…" : "Actualizar con BGG"}
+            </button>
+            {syncMessage ? (
+              <p className="text-sm text-accent-secondary">{syncMessage}</p>
+            ) : null}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface-raised/40 p-4">
+        <h3 className="text-sm font-semibold text-ink">Apariencia</h3>
+        <p className="mt-1 text-xs text-muted">
+          Se guarda en este navegador (localStorage).
+        </p>
+        <div className="mt-4 max-w-xs">
+          <ThemeSelect showLabel />
+        </div>
+      </section>
+    </div>
+  );
 }
 
 export function SettingsPage({ mode = "personal" }: { mode?: AppMode }) {
@@ -128,26 +287,7 @@ export function SettingsPage({ mode = "personal" }: { mode?: AppMode }) {
     usernameDraft.trim().toLowerCase() !== (current ?? "").toLowerCase();
 
   if (isProfile) {
-    return (
-      <div className="space-y-6">
-        <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
-          <h2 className="text-lg font-semibold text-ink">Configuración</h2>
-          <p className="mt-1 text-sm text-muted">
-            En perfil temporal solo puedes cambiar la apariencia. La sesión y el
-            username se gestionan en la barra superior / Salir.
-          </p>
-        </div>
-        <section className="rounded-xl border border-border bg-surface-raised/40 p-4">
-          <h3 className="text-sm font-semibold text-ink">Apariencia</h3>
-          <p className="mt-1 text-xs text-muted">
-            Se guarda en este navegador (localStorage).
-          </p>
-          <div className="mt-4 max-w-xs">
-            <ThemeSelect showLabel />
-          </div>
-        </section>
-      </div>
-    );
+    return <ProfileSettingsSection />;
   }
 
   return (
