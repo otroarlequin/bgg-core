@@ -11,6 +11,7 @@ Backlog y decisiones de producto para bgg-core.
 - **Auth por sesión / cookie:** dejar Basic Auth y pasar a login con cookie/sesión compartida (mejor UX móvil).
 - **Export “sugerencia de la noche”:** tarjeta PNG de Qué jugar esta noche (descartado en v1; se puede retomar).
 - **Export Shelf of shame / validador / heatmap:** no en v1.
+- **Comparador:** más de 4 slots, persistir comparaciones, export PNG.
 
 ## Descartado
 
@@ -31,6 +32,7 @@ Backlog y decisiones de producto para bgg-core.
 
 ### Actividades
 - Duel ranking + Validador de compras (previos).
+- **Comparador de juegos** — hasta 4 títulos BGG lado a lado (ficha, similitud, diferencias); añadir a la derecha.
 - **Shelf of shame** — owned sin partidas, antiguos primero.
 - **Qué jugar esta noche** — score + reshuffle; filtros jugadores (rango amplio), tiempo, peso, categorías, mecánicas, idioma; pool filtrado real + indicador `poolTotal`.
 - **Calendario / rachas** — heatmap horizontal sin scroll H, etiquetas de mes, separadores mes/año, presets (1/3/6/12 meses), filtro de fechas, detalle de partida expandible en la misma vista.

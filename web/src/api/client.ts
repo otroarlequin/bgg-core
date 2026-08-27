@@ -9,6 +9,7 @@ import type {
   PlayStats,
   PlaysQueryParams,
   PurchaseValidatorOutput,
+  GameCompareOutput,
   MatchFacet,
   PurchaseDecision,
   ShelfOfShameItem,
@@ -18,10 +19,14 @@ import type {
   SmartWishlistResult,
   SmartWishlistMode,
   HotnessScoutResult,
+  WishlistStoreMatchResult,
+  StoreId,
   SyncApiResult,
   AppSettings,
   UpdateSettingsResult,
 } from "./types";
+
+import { isProfileAppMode } from "../appMode";
 
 export class ApiError extends Error {
   status: number;
@@ -35,17 +40,12 @@ export class ApiError extends Error {
   }
 }
 
-function isProfileMode(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.location.pathname.startsWith("/profile")
-  );
-}
-
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
-    credentials: isProfileMode() ? "include" : (init?.credentials ?? "same-origin"),
+    credentials: isProfileAppMode()
+      ? "include"
+      : (init?.credentials ?? "same-origin"),
   });
   const text = await res.text();
   const contentType = res.headers.get("content-type") ?? "";
@@ -73,7 +73,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
         // keep text
       }
     }
-    if (isProfileMode() && res.status === 401) {
+    if (isProfileAppMode() && res.status === 401) {
       window.dispatchEvent(
         new CustomEvent("bgg-profile-session-lost", { detail: { message } }),
       );
@@ -168,8 +168,24 @@ export function postPurchaseValidator(body: {
   wishlistPriority?: number;
   overlapScore?: number;
   snapshot?: unknown;
+  own?: boolean;
+  wishlist?: boolean;
+  preordered?: boolean;
+  includeExpansions?: boolean;
 }): Promise<PurchaseValidatorOutput> {
   return fetchJson("/api/activities/purchase-validator", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function postGameCompare(body: {
+  action: "resolve" | "compare";
+  input?: string;
+  bggIds?: number[];
+}): Promise<GameCompareOutput> {
+  return fetchJson("/api/activities/game-compare", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -232,6 +248,21 @@ export function fetchHotnessScout(params: {
   includeExpansions?: boolean;
 } = {}): Promise<HotnessScoutResult> {
   return fetchJson(`/api/activities/hotness-scout${toQuery(params)}`);
+}
+
+export function postWishlistStoreMatch(body: {
+  action?: "scan" | "status";
+  stores?: StoreId[];
+  inStockOnly?: boolean;
+  maxItems?: number;
+  forceRefresh?: boolean;
+  minPriority?: number;
+}): Promise<WishlistStoreMatchResult> {
+  return fetchJson("/api/activities/wishlist-store-match", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 export function triggerSync(params: {

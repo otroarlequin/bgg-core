@@ -73,12 +73,17 @@ Deploy y secrets Fly: **[DEPLOY.md](./DEPLOY.md)**.
 
 ## Arquitectura
 
+Stack y dos productos (Core personal + Profile), capas `sync` → SQLite → `query` → Hono → React, librerías y deploy:
+
+→ **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**
+
 ```
 src/sync/        Ingesta BGG → SQLite
 src/query/       Consultas locales
-src/api/         REST local (Hono)
-src/activities/  Plugins (duel, validador, …)
-docs/            Guías de operación
+src/api/         REST (Hono); personal vs profile-server
+src/activities/  Actividades (duel, validador, comparador, …)
+src/profile/     Sesiones temporales (solo app Profile)
+docs/            Guías de operación y arquitectura
 web/             UI React (temas Ónix / Grafito / Cartón)
 ```
 

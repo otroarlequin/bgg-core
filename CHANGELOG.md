@@ -12,16 +12,21 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Scripts locales `dev:profile` / `dev:profile:all` (API `:3002` + Vite `:5174`).
 - Profile **Actualizar con BGG** (`POST /api/profile/sync` NDJSON) desde Configuración; fallo parcial conserva datos y `lastSyncError`.
 - Profile **admin oculto** (`/profile/admin` + API list/kill) con `PROFILE_ADMIN_PASSWORD`.
+- Actividad **Comparador de juegos**: hasta 4 títulos BGG lado a lado (ficha, similitud Jaccard, diferencias resaltadas); `POST /api/activities/game-compare`.
+- Actividad **Wishlist × tiendas**: búsqueda en vivo en Game Nerdz y Miniature Market por ítem de wishlist, match por título, caché SQLite 24h y rate limit; `POST /api/activities/wishlist-store-match` (uso personal local; sin Amazon ni CSV).
 
 ### Changed
 - Contexto de DB por request (`AsyncLocalStorage`) para aislar sesiones profile del core personal.
 - Validador: `persist: false` / `APP_MODE=profile` bloquea save y wishlist durable.
 - Proxy Vite: rutas desde `/profile` van a la API profile; stub claro en la API personal si falta `:3002`.
 - **Profile:** TTL idle **30 días** (`PROFILE_SESSION_TTL_DAYS`); cuota **10** sesiones; partidas **1 año** (`PROFILE_PLAYS_YEARS`); things solo prioritarios; progreso NDJSON + barra en la UI.
+- Hub **Actividades**: rejilla de 3 columnas, cards centradas (icono + título), tipografía más legible y orden reagrupado (validador / wishlist / mesa).
+- **Wishlist × tiendas — matching:** score más estricto (tokens numéricos de edición, sin substring, umbrales 0.90/0.70); editorial BGG vs publisher GN (`product_data.publishers`) y Manufacturer de ficha MM; prioridad en UI como texto BGG (Must have…).
 
 ### Fixed
 - `decodeHtmlEntities` / `stripHtmlToText` toleran payloads BGG no-string (evita `text.replace is not a function` al sincronizar plays/things).
 - Profile en Fly: sesiones persistidas en volumen (`/data/sessions`) para sobrevivir reinicios; más RAM y grace period de health; UI vuelve al login si llega un 401 de sesión.
+- Wishlist × tiendas: falsos positivos de título corto/edición (p. ej. Rum→miniaturas, Compile Main 2→Main 1).
 
 ## [0.2.0] — 2026-07-31
 

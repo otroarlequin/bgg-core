@@ -5,6 +5,7 @@ import * as duelRepo from "./repos/duel.js";
 import * as gamesRepo from "./repos/games.js";
 import * as playsRepo from "./repos/plays.js";
 import * as purchaseReviewsRepo from "./repos/purchase-reviews.js";
+import * as storeSearchCacheRepo from "./repos/store-search-cache.js";
 import * as syncStateRepo from "./repos/sync-state.js";
 
 export interface StorageService {
@@ -16,6 +17,7 @@ export interface StorageService {
   duel: typeof duelRepo;
   purchaseReviews: typeof purchaseReviewsRepo;
   appSettings: typeof appSettingsRepo;
+  storeSearchCache: typeof storeSearchCacheRepo;
 }
 
 export function createStorageService(db: Db): StorageService {
@@ -28,6 +30,7 @@ export function createStorageService(db: Db): StorageService {
     duel: duelRepo,
     purchaseReviews: purchaseReviewsRepo,
     appSettings: appSettingsRepo,
+    storeSearchCache: storeSearchCacheRepo,
   };
 }
 

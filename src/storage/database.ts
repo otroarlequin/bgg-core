@@ -48,6 +48,16 @@ function runMigrations(db: DatabaseSync): void {
       updated_at TEXT NOT NULL
     );
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS store_search_cache (
+      store TEXT NOT NULL,
+      query_key TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      fetched_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      PRIMARY KEY (store, query_key)
+    );
+  `);
 }
 
 function ensureColumn(

@@ -1,0 +1,33 @@
+{
+  "count": 3,
+  "products": [
+    {
+      "display_name": "Wingspan",
+      "name": "Wingspan Board Game",
+      "price": 49.99,
+      "usd_price": 49.99,
+      "stock": 12,
+      "url": "https://www.gamenerdz.com/wingspan",
+      "sku": "STM900",
+      "product_data": {
+        "publishers": ["Stonemaier Games"]
+      }
+    },
+    {
+      "display_name": "Wingspan: European Expansion",
+      "name": "Wingspan European Expansion",
+      "price": 29.99,
+      "stock": 0,
+      "url": "https://www.gamenerdz.com/wingspan-european-expansion",
+      "sku": "STM910",
+      "product_data": {
+        "publishers": ["Stonemaier Games"]
+      }
+    },
+    {
+      "name": "Wrong Title Without URL",
+      "price": 9.99,
+      "stock": 1
+    }
+  ]
+}

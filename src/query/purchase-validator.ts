@@ -66,6 +66,11 @@ export interface OverlapSummary {
   /** Mean Jaccard similarity of the top-10 most similar collection games (0–100). */
   top10MeanPercent: number;
   topSimilar: MatchGameRow[];
+  /**
+   * Broader scored pool (up to 50) so the UI can re-filter by status / expansions
+   * without another analyze round-trip.
+   */
+  pool: MatchGameRow[];
   hint: string;
 }
 
@@ -80,6 +85,16 @@ export interface FacetMatchesResult {
   value: string;
   total: number;
   items: MatchGameRow[];
+}
+
+/** Narrow the owned/wishlist/preordered universe for overlap and facet matches. */
+export interface PurchaseUniverseFilters {
+  /** When any status flag is true, keep rows matching at least one. When none, keep all. */
+  own?: boolean;
+  wishlist?: boolean;
+  preordered?: boolean;
+  /** When false, exclude boardgameexpansion. Default true. */
+  includeExpansions?: boolean;
 }
 
 interface UniverseRow {
@@ -186,6 +201,33 @@ function loadUniverse(db: Db): UniverseRow[] {
     .all() as unknown as UniverseRow[];
 }
 
+export function filterPurchaseUniverse(
+  rows: UniverseRow[],
+  filters: PurchaseUniverseFilters = {},
+): UniverseRow[] {
+  const statusActive =
+    filters.own === true ||
+    filters.wishlist === true ||
+    filters.preordered === true;
+
+  return rows.filter((row) => {
+    if (statusActive) {
+      const ok =
+        (filters.own === true && row.own === 1) ||
+        (filters.wishlist === true && row.wishlist === 1) ||
+        (filters.preordered === true && row.preordered === 1);
+      if (!ok) return false;
+    }
+    if (
+      filters.includeExpansions === false &&
+      row.subtype === "boardgameexpansion"
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
 function rowToMatch(row: UniverseRow, similarity?: number): MatchGameRow {
   return {
     bggId: row.bgg_id,
@@ -258,10 +300,12 @@ export function buildCandidateView(
 export function analyzePurchaseCandidate(
   db: Db,
   game: Game,
+  _filters: PurchaseUniverseFilters = {},
 ): PurchaseAnalysis {
-  const universe = loadUniverse(db);
+  // Overlap pool is always the full universe; UI filters status/expansions locally.
+  const fullUniverse = loadUniverse(db);
   const collectionRow =
-    universe.find((r) => r.bgg_id === game.bggId) ??
+    fullUniverse.find((r) => r.bgg_id === game.bggId) ??
     (db
       .prepare(
         `SELECT
@@ -278,7 +322,7 @@ export function analyzePurchaseCandidate(
     null;
 
   const candidateTokens = similarityTokens(game);
-  const scored = universe
+  const scored = fullUniverse
     .filter((r) => r.bgg_id !== game.bggId)
     .map((row) => {
       const tokens = similarityTokens({
@@ -290,6 +334,7 @@ export function analyzePurchaseCandidate(
     })
     .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
 
+  const pool = scored.slice(0, 50);
   const topSimilar = scored.slice(0, 10);
   const top10Mean =
     topSimilar.length === 0
@@ -310,6 +355,7 @@ export function analyzePurchaseCandidate(
     overlap: {
       top10MeanPercent: Math.round(top10Mean * 1000) / 10,
       topSimilar,
+      pool,
       hint: "Similitud con tu ludoteca (mecánicas, categorías y diseñadores), no predicción de gusto.",
     },
   };
@@ -319,9 +365,16 @@ export function queryFacetMatches(
   db: Db,
   facet: MatchFacet,
   value: string,
-  options: { limit?: number; excludeBggId?: number } = {},
+  options: {
+    limit?: number;
+    excludeBggId?: number;
+    filters?: PurchaseUniverseFilters;
+  } = {},
 ): FacetMatchesResult {
-  const universe = loadUniverse(db);
+  const universe = filterPurchaseUniverse(
+    loadUniverse(db),
+    options.filters ?? {},
+  );
   const needle = normalizeToken(value);
   const limit = options.limit ?? 10;
 

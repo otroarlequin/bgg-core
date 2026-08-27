@@ -248,6 +248,8 @@ export interface PurchaseAnalysis {
   overlap: {
     top10MeanPercent: number;
     topSimilar: MatchGameRow[];
+    /** Broader scored pool for client-side status / expansion filters. */
+    pool?: MatchGameRow[];
     hint: string;
   };
 }
@@ -273,6 +275,64 @@ export interface PurchaseValidatorOutput {
   analysis?: PurchaseAnalysis;
   matches?: FacetMatchesResult;
   savedReviewId?: number;
+}
+
+export interface CompareGameColumn {
+  bggId: number;
+  name: string;
+  yearPublished: number | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  playingTime: number | null;
+  minPlayTime: number | null;
+  maxPlayTime: number | null;
+  weight: number | null;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  designers: string[];
+  mechanics: string[];
+  categories: string[];
+  languageDependence: string | null;
+  bggRating: number | null;
+  bggRank: number | null;
+  subtype: string | null;
+  collection: {
+    own: boolean;
+    wishlist: boolean;
+    preordered: boolean;
+    personalRating: number | null;
+    numPlays: number;
+    subtype: string | null;
+  } | null;
+  similarityVsBasePercent: number | null;
+}
+
+export interface CompareSpecRow {
+  key: string;
+  label: string;
+  values: Array<string | null>;
+  differs: boolean;
+}
+
+export interface CompareTagGroup {
+  label: string;
+  shared: string[];
+  uniqueByGame: Array<{ bggId: number; name: string; values: string[] }>;
+}
+
+export interface GameCompareResult {
+  games: CompareGameColumn[];
+  rows: CompareSpecRow[];
+  tagGroups: CompareTagGroup[];
+  meanSimilarityVsBasePercent: number | null;
+}
+
+export interface GameCompareOutput {
+  message: string;
+  bggId?: number;
+  searchResults?: BggSearchHit[];
+  compare?: GameCompareResult;
+  maxSlots?: number;
 }
 
 export interface ShelfOfShameItem {
@@ -427,6 +487,46 @@ export interface HotnessScoutResult {
   alreadyOwnedSkipped: number;
   suggestions: SmartWishlistSuggestion[];
   profile: SmartWishlistResult["profile"];
+}
+
+export type StoreId = "gamenerdz" | "miniaturemarket";
+
+export interface ScoredStoreOffer {
+  store: StoreId;
+  name: string;
+  price: number | null;
+  currency: string;
+  url: string;
+  sku: string | null;
+  inStock: boolean | null;
+  publisher: string | null;
+  score: number;
+}
+
+export interface WishlistStoreMatchItem {
+  bggId: number;
+  name: string;
+  thumbnailUrl: string | null;
+  wishlistPriority: number | null;
+  offers: ScoredStoreOffer[];
+}
+
+export interface WishlistStoreAmbiguousItem {
+  bggId: number;
+  name: string;
+  wishlistPriority: number | null;
+  candidates: ScoredStoreOffer[];
+}
+
+export interface WishlistStoreMatchResult {
+  message: string;
+  scanned: number;
+  cacheHits: number;
+  networkCalls: number;
+  matches: WishlistStoreMatchItem[];
+  ambiguous: WishlistStoreAmbiguousItem[];
+  noOffer: number;
+  errors: Array<{ store: string; query: string; error: string }>;
 }
 
 export interface SyncApiResult {

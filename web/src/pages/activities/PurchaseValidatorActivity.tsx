@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { postPurchaseValidator } from "../../api/client";
 import type {
   BggSearchHit,
@@ -23,6 +23,55 @@ const FACET_LABELS: Record<MatchFacet, string> = {
   category: "Categoría",
   languageDependence: "Idioma",
 };
+
+function filterMatchRows(
+  items: MatchGameRow[],
+  filters: {
+    own: boolean;
+    wishlist: boolean;
+    preordered: boolean;
+    includeExpansions: boolean;
+  },
+): MatchGameRow[] {
+  const statusActive = filters.own || filters.wishlist || filters.preordered;
+  return items.filter((item) => {
+    if (statusActive) {
+      const ok =
+        (filters.own && item.own) ||
+        (filters.wishlist && item.wishlist) ||
+        (filters.preordered && item.preordered);
+      if (!ok) return false;
+    }
+    if (!filters.includeExpansions && item.subtype === "boardgameexpansion") {
+      return false;
+    }
+    return true;
+  });
+}
+
+function overlapFromPool(
+  pool: MatchGameRow[],
+  filters: {
+    own: boolean;
+    wishlist: boolean;
+    preordered: boolean;
+    includeExpansions: boolean;
+  },
+): { topSimilar: MatchGameRow[]; top10MeanPercent: number; filteredTotal: number } {
+  const filtered = filterMatchRows(pool, filters).sort(
+    (a, b) => (b.similarity ?? 0) - (a.similarity ?? 0),
+  );
+  const topSimilar = filtered.slice(0, 10);
+  const top10MeanPercent =
+    topSimilar.length === 0
+      ? 0
+      : Math.round(
+          (topSimilar.reduce((sum, g) => sum + (g.similarity ?? 0), 0) /
+            topSimilar.length) *
+            1000,
+        ) / 10;
+  return { topSimilar, top10MeanPercent, filteredTotal: filtered.length };
+}
 
 function StatusBadges({
   own,
@@ -56,16 +105,19 @@ function StatusBadges({
 
 function Chip({
   label,
+  facetLabel,
   active,
   onClick,
 }: {
   label: string;
+  facetLabel: string;
   active?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
+      title={`Ver en tu colección: ${facetLabel} «${label}»`}
       onClick={onClick}
       className={`min-h-10 rounded-lg border px-3 py-2 text-left text-xs transition md:min-h-0 md:px-2 md:py-1 ${
         active
@@ -92,6 +144,7 @@ function ChipGroup({
   onSelect: (facet: MatchFacet, value: string) => void;
 }) {
   if (values.length === 0) return null;
+  const facetLabel = FACET_LABELS[facet];
   return (
     <div>
       <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-dim">
@@ -102,6 +155,7 @@ function ChipGroup({
           <Chip
             key={`${facet}-${value}`}
             label={value}
+            facetLabel={facetLabel}
             active={active?.facet === facet && active.value === value}
             onClick={() => onSelect(facet, value)}
           />
@@ -335,9 +389,16 @@ function CandidatePanel({
         </div>
 
         <div className="min-w-0 space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-dim">
-            Atributos para validar
-          </p>
+          <div
+            title="Haz click en un diseñador, mecánica u otro atributo para ver coincidencias en tu colección. Pasa el cursor sobre cada chip para ver qué se buscará. Vuelve a hacer click en el chip activo para deseleccionarlo."
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+              Atributos para validar
+            </p>
+            <p className="mt-1 text-sm font-medium text-ink">
+              Haz click en un chip para ver coincidencias en tu colección.
+            </p>
+          </div>
           <ChipGroup
             title="Diseñadores"
             facet="designer"
@@ -411,6 +472,19 @@ export function PurchaseValidatorActivity({
   const [decision, setDecision] = useState<PurchaseDecision>("sin_decision");
   const [wishlistPriority, setWishlistPriority] = useState(3);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [filterOwn, setFilterOwn] = useState(true);
+  const [filterWishlist, setFilterWishlist] = useState(false);
+  const [filterPreordered, setFilterPreordered] = useState(false);
+  const [includeExpansions, setIncludeExpansions] = useState(true);
+
+  function universeFilterBody() {
+    return {
+      own: filterOwn || undefined,
+      wishlist: filterWishlist || undefined,
+      preordered: filterPreordered || undefined,
+      includeExpansions,
+    };
+  }
 
   useEffect(() => {
     if (initialBggId == null) return;
@@ -426,7 +500,11 @@ export function PurchaseValidatorActivity({
     setError(null);
     if (!options?.keepStatus) setStatusMessage(null);
     try {
-      const result = await postPurchaseValidator({ action: "analyze", bggId });
+      const result = await postPurchaseValidator({
+        action: "analyze",
+        bggId,
+        ...universeFilterBody(),
+      });
       if (!result.analysis) {
         throw new Error(result.message || "No se pudo analizar");
       }
@@ -479,6 +557,17 @@ export function PurchaseValidatorActivity({
 
   async function handleFacet(facet: MatchFacet, value: string, all = false) {
     if (!analysis) return;
+    // Toggle off when clicking the same chip again.
+    if (
+      !all &&
+      activeFacet?.facet === facet &&
+      activeFacet.value === value
+    ) {
+      setActiveFacet(null);
+      setMatches(null);
+      setShowAll(false);
+      return;
+    }
     setActiveFacet({ facet, value });
     setShowAll(all);
     setLoading(true);
@@ -490,6 +579,7 @@ export function PurchaseValidatorActivity({
         facet,
         value,
         all,
+        ...universeFilterBody(),
       });
       setMatches(result.matches ?? null);
     } catch (err) {
@@ -497,6 +587,12 @@ export function PurchaseValidatorActivity({
     } finally {
       setLoading(false);
     }
+  }
+
+  function clearFacet() {
+    setActiveFacet(null);
+    setMatches(null);
+    setShowAll(false);
   }
 
   async function handleSave() {
@@ -509,7 +605,7 @@ export function PurchaseValidatorActivity({
         bggId: analysis.candidate.bggId,
         notes: notes || undefined,
         decision,
-        overlapScore: analysis.overlap.top10MeanPercent,
+        overlapScore: overlapView.top10MeanPercent,
         snapshot: analysis,
       });
       setStatusMessage(result.message);
@@ -550,6 +646,56 @@ export function PurchaseValidatorActivity({
     setStatusMessage(null);
   }
 
+  const overlapView = useMemo(() => {
+    if (!analysis) {
+      return { topSimilar: [] as MatchGameRow[], top10MeanPercent: 0, filteredTotal: 0 };
+    }
+    const pool =
+      analysis.overlap.pool && analysis.overlap.pool.length > 0
+        ? analysis.overlap.pool
+        : analysis.overlap.topSimilar;
+    return overlapFromPool(pool, {
+      own: filterOwn,
+      wishlist: filterWishlist,
+      preordered: filterPreordered,
+      includeExpansions,
+    });
+  }, [
+    analysis,
+    filterOwn,
+    filterWishlist,
+    filterPreordered,
+    includeExpansions,
+  ]);
+
+  // Re-query facet matches when overlap filters change (same chip stays selected).
+  useEffect(() => {
+    if (!analysis || !activeFacet) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await postPurchaseValidator({
+          action: "matches",
+          bggId: analysis.candidate.bggId,
+          facet: activeFacet.facet,
+          value: activeFacet.value,
+          all: showAll,
+          own: filterOwn || undefined,
+          wishlist: filterWishlist || undefined,
+          preordered: filterPreordered || undefined,
+          includeExpansions,
+        });
+        if (!cancelled) setMatches(result.matches ?? null);
+      } catch {
+        // keep previous matches; user can retry by re-clicking the chip
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when filters change
+  }, [filterOwn, filterWishlist, filterPreordered, includeExpansions]);
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
@@ -562,26 +708,28 @@ export function PurchaseValidatorActivity({
 
       {step === "input" || step === "search" ? (
         <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
-          <label className="text-sm">
-            <span className="mb-1 block text-muted">
-              Nombre, URL o ID de BGG
-            </span>
-            <input
-              type="text"
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2"
-              placeholder="https://boardgamegeek.com/boardgame/13/catan"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleResolve();
-              }}
-            />
+          <label
+            htmlFor="purchase-validator-input"
+            className="mb-1 block text-sm text-muted"
+          >
+            Nombre, URL o ID de BGG
           </label>
+          <input
+            id="purchase-validator-input"
+            type="text"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-ink"
+            placeholder="https://boardgamegeek.com/boardgame/13/catan"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleResolve();
+            }}
+          />
           <button
             type="button"
             disabled={loading || !input.trim()}
             onClick={() => void handleResolve()}
-            className="mt-4 min-h-11 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-surface hover:bg-accent-hover disabled:opacity-50 md:min-h-0 md:py-2"
+            className="mt-4 min-h-11 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-surface hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 md:min-h-0 md:py-2"
           >
             {loading ? "Buscando..." : "Analizar"}
           </button>
@@ -633,7 +781,7 @@ export function PurchaseValidatorActivity({
             <button
               type="button"
               onClick={handleReset}
-              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-card"
+              className="rounded-lg border border-border px-3 py-1.5 text-sm text-ink hover:bg-surface-card"
             >
               Nuevo análisis
             </button>
@@ -662,22 +810,31 @@ export function PurchaseValidatorActivity({
                   {FACET_LABELS[activeFacet.facet]}:{" "}
                   <span className="text-accent">{activeFacet.value}</span>
                 </h3>
-                {matches && matches.total > 10 ? (
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={loading}
-                    onClick={() =>
-                      void handleFacet(
-                        activeFacet.facet,
-                        activeFacet.value,
-                        !showAll,
-                      )
-                    }
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-card"
+                    onClick={clearFacet}
+                    className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-sm text-ink hover:bg-surface-card"
                   >
-                    {showAll ? "Ver top 10" : `Ver todos (${matches.total})`}
+                    Limpiar selección
                   </button>
-                ) : null}
+                  {matches && matches.total > 10 ? (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() =>
+                        void handleFacet(
+                          activeFacet.facet,
+                          activeFacet.value,
+                          !showAll,
+                        )
+                      }
+                      className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-card disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {showAll ? "Ver top 10" : `Ver todos (${matches.total})`}
+                    </button>
+                  ) : null}
+                </div>
               </div>
               {matches ? (
                 <p className="text-sm text-muted">
@@ -686,29 +843,75 @@ export function PurchaseValidatorActivity({
               ) : null}
               {matches ? <MatchesTable items={matches.items} /> : null}
             </div>
-          ) : (
-            <p className="text-sm text-muted-dim">
-              Haz click en un diseñador, mecánica u otro atributo para ver
-              coincidencias en tu colección.
+          ) : null}
+
+          <div className="rounded-xl border border-border bg-surface-raised/40 p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-dim">
+              Filtros del overlap
+            </h3>
+            <p className="mt-1 text-xs text-muted">
+              Filtran el % y la lista de juegos más similares (y las
+              coincidencias por atributo).
             </p>
-          )}
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-ink-soft">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={filterOwn}
+                  onChange={(e) => setFilterOwn(e.target.checked)}
+                />
+                Solo owned
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={filterWishlist}
+                  onChange={(e) => setFilterWishlist(e.target.checked)}
+                />
+                Wishlist
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={filterPreordered}
+                  onChange={(e) => setFilterPreordered(e.target.checked)}
+                />
+                Preordered
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={includeExpansions}
+                  onChange={(e) => setIncludeExpansions(e.target.checked)}
+                />
+                Incluir expansiones
+              </label>
+            </div>
+          </div>
 
           <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-dim">
               Overlap con tu ludoteca
             </h3>
             <p className="mt-2 text-3xl font-bold text-accent">
-              {analysis.overlap.top10MeanPercent}%
+              {overlapView.top10MeanPercent}%
             </p>
             <p className="mt-1 text-sm text-muted">{analysis.overlap.hint}</p>
-            {analysis.overlap.topSimilar.length > 0 ? (
+            {overlapView.filteredTotal === 0 ? (
+              <p className="mt-4 rounded-xl border border-border bg-surface-raised/40 p-4 text-sm text-muted-dim">
+                Ningún juego de la lista cumple estos filtros.
+              </p>
+            ) : (
               <div className="mt-4">
                 <p className="mb-2 text-sm text-muted">
                   Top juegos más similares
+                  {overlapView.filteredTotal > 10
+                    ? ` (mostrando 10 de ${overlapView.filteredTotal})`
+                    : ` (${overlapView.filteredTotal})`}
                 </p>
-                <MatchesTable items={analysis.overlap.topSimilar} />
+                <MatchesTable items={overlapView.topSimilar} />
               </div>
-            ) : null}
+            )}
           </div>
 
           {detectAppMode() === "profile" ? (

@@ -72,3 +72,62 @@
 body {
   @apply min-h-screen bg-surface text-ink;
 }
+
+/*
+  Cursor app-wide: el valor UA `auto` pone I-beam sobre texto seleccionable.
+  Heredamos `default` en todo; solo campos editables usan `text`.
+*/
+html {
+  cursor: default;
+}
+
+*,
+*::before,
+*::after {
+  cursor: inherit;
+}
+
+a[href],
+button,
+[type="button"],
+[type="submit"],
+[type="reset"],
+[role="button"],
+summary,
+select,
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]),
+label:has(input[type="range"]),
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+input[type="file"] {
+  cursor: pointer;
+  user-select: none;
+}
+
+input:not([type]),
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="time"],
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+  user-select: text;
+}
+
+:disabled,
+[disabled],
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+

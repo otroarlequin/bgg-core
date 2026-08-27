@@ -6,6 +6,10 @@ import {
   type PurchaseValidatorParams,
 } from "../../activities/purchase-validator/index.js";
 import {
+  runGameCompare,
+  type GameCompareParams,
+} from "../../activities/game-compare/index.js";
+import {
   runHotnessScout,
   type HotnessScoutRunParams,
 } from "../../activities/hotness-scout/index.js";
@@ -13,6 +17,10 @@ import {
   runSmartWishlist,
   type SmartWishlistRunParams,
 } from "../../activities/smart-wishlist/index.js";
+import {
+  runWishlistStoreMatch,
+  type WishlistStoreMatchRunParams,
+} from "../../activities/wishlist-store-match/index.js";
 import type { SmartWishlistMode } from "../../query/smart-wishlist.js";
 import { getActivityContext } from "../context.js";
 
@@ -45,6 +53,17 @@ activitiesRoutes.post("/purchase-validator", async (c) => {
   const body = (await c.req.json()) as PurchaseValidatorParams;
   try {
     const result = await runPurchaseValidator(body, getActivityContext());
+    return c.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ message }, 400);
+  }
+});
+
+activitiesRoutes.post("/game-compare", async (c) => {
+  const body = (await c.req.json()) as GameCompareParams;
+  try {
+    const result = await runGameCompare(body, getActivityContext());
     return c.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -159,6 +178,17 @@ activitiesRoutes.get("/hotness-scout", async (c) => {
   };
   try {
     const result = await runHotnessScout(params, getActivityContext());
+    return c.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ message }, 400);
+  }
+});
+
+activitiesRoutes.post("/wishlist-store-match", async (c) => {
+  const body = (await c.req.json()) as WishlistStoreMatchRunParams;
+  try {
+    const result = await runWishlistStoreMatch(body, getActivityContext());
     return c.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

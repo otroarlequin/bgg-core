@@ -10,6 +10,7 @@ import {
   queryFacetMatches,
   type MatchFacet,
   type PurchaseAnalysis,
+  type PurchaseUniverseFilters,
 } from "../../query/purchase-validator.js";
 import type { PurchaseDecision } from "../../storage/repos/purchase-reviews.js";
 import type { Activity, ActivityContext } from "../types.js";
@@ -28,6 +29,21 @@ export interface PurchaseValidatorParams {
   snapshot?: unknown;
   /** When false, save/wishlist are rejected (profile / ephemeral mode). Default true. */
   persist?: boolean;
+  own?: boolean;
+  wishlist?: boolean;
+  preordered?: boolean;
+  includeExpansions?: boolean;
+}
+
+function universeFiltersFromParams(
+  params: PurchaseValidatorParams,
+): PurchaseUniverseFilters {
+  return {
+    own: params.own,
+    wishlist: params.wishlist,
+    preordered: params.preordered,
+    includeExpansions: params.includeExpansions,
+  };
 }
 
 export interface PurchaseValidatorOutput {
@@ -92,7 +108,11 @@ export async function runPurchaseValidator(
     }
     const client = getClient();
     const game = await fetchAndCacheThing(ctx.storage.db, client, bggId);
-    const analysis = analyzePurchaseCandidate(ctx.storage.db, game);
+    const analysis = analyzePurchaseCandidate(
+      ctx.storage.db,
+      game,
+      universeFiltersFromParams(params),
+    );
     return {
       message: analysis.alreadyInCollection
         ? "Este juego ya está en tu colección."
@@ -112,6 +132,7 @@ export async function runPurchaseValidator(
     const matches = queryFacetMatches(ctx.storage.db, facet, value, {
       limit: params.all ? 0 : 10,
       excludeBggId: bggId,
+      filters: universeFiltersFromParams(params),
     });
     return {
       message: `${matches.total} coincidencias para ${facet}: ${value}`,

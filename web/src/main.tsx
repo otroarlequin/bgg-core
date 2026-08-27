@@ -4,9 +4,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { ProfileApp } from "./ProfileApp";
 import { ProfileAdminPage } from "./pages/ProfileAdminPage";
-import { detectAppMode } from "./appMode";
+import { detectAppMode, ensureProfileEntryPath } from "./appMode";
 import { applyTheme, getStoredTheme } from "./theme";
 import "./index.css";
+
+ensureProfileEntryPath();
 
 applyTheme(getStoredTheme());
 
