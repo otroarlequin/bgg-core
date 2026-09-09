@@ -3,6 +3,8 @@ import * as appSettingsRepo from "./repos/app-settings.js";
 import * as collectionRepo from "./repos/collection.js";
 import * as duelRepo from "./repos/duel.js";
 import * as gamesRepo from "./repos/games.js";
+import * as marketAlertsRepo from "./repos/market-alerts.js";
+import * as marketListingsCacheRepo from "./repos/market-listings-cache.js";
 import * as playsRepo from "./repos/plays.js";
 import * as purchaseReviewsRepo from "./repos/purchase-reviews.js";
 import * as storeSearchCacheRepo from "./repos/store-search-cache.js";
@@ -18,6 +20,8 @@ export interface StorageService {
   purchaseReviews: typeof purchaseReviewsRepo;
   appSettings: typeof appSettingsRepo;
   storeSearchCache: typeof storeSearchCacheRepo;
+  marketListingsCache: typeof marketListingsCacheRepo;
+  marketAlerts: typeof marketAlertsRepo;
 }
 
 export function createStorageService(db: Db): StorageService {
@@ -31,6 +35,8 @@ export function createStorageService(db: Db): StorageService {
     purchaseReviews: purchaseReviewsRepo,
     appSettings: appSettingsRepo,
     storeSearchCache: storeSearchCacheRepo,
+    marketListingsCache: marketListingsCacheRepo,
+    marketAlerts: marketAlertsRepo,
   };
 }
 

@@ -89,28 +89,32 @@ function downloadRemote(
 
 function uploadRemote(appName: string, localPath: string): void {
   console.log("Replacing remote DB...");
-  const rm = fly([
+  // Upload to a temp path first: fly sftp will not overwrite existing files.
+  // Run remote commands via `sh -c` so compound ops work (and Windows doesn't
+  // treat `rm -f` as flyctl flags).
+  const putIncoming = fly([
+    "ssh",
+    "sftp",
+    "put",
+    localPath,
+    "/data/bgg-incoming.db",
+    "-a",
+    appName,
+  ]);
+  if (putIncoming.status !== 0) {
+    console.error(putIncoming.stderr || putIncoming.stdout || "sftp put failed");
+    process.exit(1);
+  }
+  const swap = fly([
     "ssh",
     "console",
     "-a",
     appName,
     "-C",
-    "rm -f /data/bgg.db /data/bgg.db-wal /data/bgg.db-shm",
+    "sh -c \"rm -f /data/bgg.db /data/bgg.db-wal /data/bgg.db-shm; mv /data/bgg-incoming.db /data/bgg.db\"",
   ]);
-  if (rm.status !== 0) {
-    console.warn(String(rm.stderr || rm.stdout || "").trim());
-  }
-  const put = fly([
-    "ssh",
-    "sftp",
-    "put",
-    localPath,
-    "/data/bgg.db",
-    "-a",
-    appName,
-  ]);
-  if (put.status !== 0) {
-    console.error(put.stderr || put.stdout || "sftp put failed");
+  if (swap.status !== 0) {
+    console.error(swap.stderr || swap.stdout || "remote swap failed");
     process.exit(1);
   }
   console.log("Uploaded. Restarting app...");

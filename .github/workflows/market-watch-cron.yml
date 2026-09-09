@@ -1,0 +1,15 @@
+name: Market price watches cron
+
+on:
+  schedule:
+    - cron: "0 8,20 * * *"
+  workflow_dispatch:
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger market watch cron
+        run: |
+          curl -sf -X POST "${{ vars.BGG_CORE_URL || 'https://bgg-core.fly.dev' }}/api/cron/market-watches" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

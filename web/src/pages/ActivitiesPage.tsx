@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { DuelActivity } from "./activities/DuelActivity";
 import { PurchaseValidatorActivity } from "./activities/PurchaseValidatorActivity";
 import { ShelfOfShameActivity } from "./activities/ShelfOfShameActivity";
@@ -8,6 +8,8 @@ import { SmartWishlistActivity } from "./activities/SmartWishlistActivity";
 import { HotnessScoutActivity } from "./activities/HotnessScoutActivity";
 import { GameCompareActivity } from "./activities/GameCompareActivity";
 import { WishlistStoreMatchActivity } from "./activities/WishlistStoreMatchActivity";
+import { WishlistMarketActivity } from "./activities/WishlistMarketActivity";
+import { postWishlistMarket } from "../api/client";
 
 type ActivityId =
   | "hub"
@@ -19,7 +21,10 @@ type ActivityId =
   | "shelf-of-shame"
   | "smart-wishlist"
   | "hotness-scout"
-  | "wishlist-store-match";
+  | "wishlist-store-match"
+  | "wishlist-market";
+
+export type ActivitiesFocus = Exclude<ActivityId, "hub">;
 
 const activities: Array<{
   id: Exclude<ActivityId, "hub">;
@@ -61,6 +66,13 @@ const activities: Array<{
     description:
       "Cruza tu wishlist con Game Nerdz y Miniature Market para ver precio y stock.",
     Icon: StoreIcon,
+  },
+  {
+    id: "wishlist-market",
+    title: "Wishlist × BGG Market",
+    description:
+      "Ofertas de GeekMarket para tu wishlist, con novedades in-app al escanear.",
+    Icon: MarketIcon,
   },
   {
     id: "pairwise-duel",
@@ -177,6 +189,16 @@ function StoreIcon() {
   );
 }
 
+function MarketIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 7h16v12H4z" strokeLinejoin="round" />
+      <path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7" />
+      <path d="M8 12h8M8 15h5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function HotnessIcon() {
   return (
     <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -189,9 +211,36 @@ function HotnessIcon() {
   );
 }
 
-export function ActivitiesPage() {
+export function ActivitiesPage({
+  initialFocus = null,
+  onConsumedInitialFocus,
+}: {
+  initialFocus?: ActivitiesFocus | null;
+  onConsumedInitialFocus?: () => void;
+} = {}) {
   const [active, setActive] = useState<ActivityId>("hub");
   const [validatorBggId, setValidatorBggId] = useState<number | null>(null);
+  const [marketUnread, setMarketUnread] = useState(0);
+
+  useEffect(() => {
+    if (!initialFocus) return;
+    setActive(initialFocus);
+    onConsumedInitialFocus?.();
+    // Solo reaccionar al focus entrante; el callback del padre puede ser inline.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [initialFocus]);
+
+  useEffect(() => {
+    if (active !== "hub") return;
+    void (async () => {
+      try {
+        const data = await postWishlistMarket({ action: "listAlerts" });
+        setMarketUnread(data.alertsUnread);
+      } catch {
+        setMarketUnread(0);
+      }
+    })();
+  }, [active]);
 
   if (active !== "hub") {
     return (
@@ -230,6 +279,7 @@ export function ActivitiesPage() {
         {active === "wishlist-store-match" ? (
           <WishlistStoreMatchActivity />
         ) : null}
+        {active === "wishlist-market" ? <WishlistMarketActivity /> : null}
         {active === "what-to-play" ? <WhatToPlayActivity /> : null}
         {active === "play-calendar" ? <PlayCalendarActivity /> : null}
         {active === "shelf-of-shame" ? <ShelfOfShameActivity /> : null}
@@ -251,8 +301,13 @@ export function ActivitiesPage() {
             key={activity.id}
             type="button"
             onClick={() => setActive(activity.id)}
-            className="group flex min-h-11 flex-col items-center rounded-xl border border-border bg-surface-raised/60 p-4 text-center transition hover:border-accent/50 hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+            className="group relative flex min-h-11 flex-col items-center rounded-xl border border-border bg-surface-raised/60 p-4 text-center transition hover:border-accent/50 hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
           >
+            {activity.id === "wishlist-market" && marketUnread > 0 ? (
+              <span className="absolute right-3 top-3 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-surface">
+                {marketUnread > 99 ? "99+" : marketUnread}
+              </span>
+            ) : null}
             <div className="mb-3 flex h-12 w-12 items-center justify-center">
               <activity.Icon />
             </div>

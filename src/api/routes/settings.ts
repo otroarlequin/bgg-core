@@ -6,6 +6,11 @@ import {
   setStoredBggUsername,
   wipeBggUserData,
 } from "../../storage/repos/app-settings.js";
+import {
+  getNotificationSettings,
+  setMarketWatchCronEnabled,
+  setNotifyEmail,
+} from "../../storage/repos/notification-settings.js";
 import { getDb } from "../context.js";
 
 export const settingsRoutes = new Hono();
@@ -15,6 +20,9 @@ export interface SettingsResponse {
   bggUsernameSource: "db" | "env" | null;
   hasCollectionData: boolean;
   hasPlaysData: boolean;
+  notifyEmail: string | null;
+  marketWatchCronEnabled: boolean;
+  resendConfigured: boolean;
 }
 
 settingsRoutes.get("/", (c) => {
@@ -22,29 +30,60 @@ settingsRoutes.get("/", (c) => {
   const config = loadConfig();
   const { username, source } = getEffectiveBggUsername(db, config);
   const flags = hasBggUserData(db);
+  const notifications = getNotificationSettings(db);
   const body: SettingsResponse = {
     bggUsername: username,
     bggUsernameSource: source,
     ...flags,
+    ...notifications,
   };
   return c.json(body);
 });
 
 settingsRoutes.put("/", async (c) => {
-  let body: { bggUsername?: string; confirmReplace?: boolean } = {};
+  let body: {
+    bggUsername?: string;
+    confirmReplace?: boolean;
+    notifyEmail?: string | null;
+    marketWatchCronEnabled?: boolean;
+  } = {};
   try {
-    body = (await c.req.json()) as {
-      bggUsername?: string;
-      confirmReplace?: boolean;
-    };
+    body = (await c.req.json()) as typeof body;
   } catch {
     return c.json({ message: "JSON inválido" }, 400);
   }
 
-  const next = (body.bggUsername ?? "").trim();
-  if (!next) {
-    return c.json({ message: "bggUsername no puede estar vacío." }, 400);
+  const db = getDb();
+  const config = loadConfig();
+
+  if (body.notifyEmail !== undefined) {
+    const email = body.notifyEmail?.trim() ?? "";
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return c.json({ message: "Email de notificaciones inválido" }, 400);
+    }
+    setNotifyEmail(db, email || null);
   }
+
+  if (body.marketWatchCronEnabled !== undefined) {
+    setMarketWatchCronEnabled(db, body.marketWatchCronEnabled === true);
+  }
+
+  const usernameInput = body.bggUsername?.trim();
+  if (!usernameInput) {
+    const after = getEffectiveBggUsername(db, config);
+    const afterFlags = hasBggUserData(db);
+    const notifications = getNotificationSettings(db);
+    return c.json({
+      ok: true,
+      wiped: false,
+      bggUsername: after.username,
+      bggUsernameSource: after.source,
+      ...afterFlags,
+      ...notifications,
+    });
+  }
+
+  const next = usernameInput;
   if (!/^[A-Za-z0-9_-]{1,50}$/.test(next)) {
     return c.json(
       {
@@ -55,8 +94,6 @@ settingsRoutes.put("/", async (c) => {
     );
   }
 
-  const db = getDb();
-  const config = loadConfig();
   const current = getEffectiveBggUsername(db, config);
   const changing =
     !current.username ||
@@ -88,11 +125,13 @@ settingsRoutes.put("/", async (c) => {
   setStoredBggUsername(db, next);
   const after = getEffectiveBggUsername(db, config);
   const afterFlags = hasBggUserData(db);
+  const notifications = getNotificationSettings(db);
   return c.json({
     ok: true,
     wiped: Boolean(changing && hasData && body.confirmReplace === true),
     bggUsername: after.username,
     bggUsernameSource: after.source,
     ...afterFlags,
+    ...notifications,
   });
 });

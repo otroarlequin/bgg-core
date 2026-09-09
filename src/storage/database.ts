@@ -58,6 +58,52 @@ function runMigrations(db: DatabaseSync): void {
       PRIMARY KEY (store, query_key)
     );
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS market_listings_cache (
+      bgg_id INTEGER PRIMARY KEY NOT NULL,
+      payload_json TEXT NOT NULL,
+      fetched_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    );
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS market_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bgg_id INTEGER NOT NULL,
+      listing_key TEXT NOT NULL,
+      game_name TEXT NOT NULL,
+      price REAL,
+      currency TEXT,
+      condition TEXT,
+      url TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      read_at TEXT,
+      UNIQUE(bgg_id, listing_key)
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_market_alerts_unread
+      ON market_alerts(read_at, created_at DESC);
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS market_price_watches (
+      bgg_id INTEGER PRIMARY KEY NOT NULL,
+      max_price REAL NOT NULL,
+      tolerance_pct REAL NOT NULL DEFAULT 10,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS market_watch_notifications (
+      bgg_id INTEGER NOT NULL,
+      listing_key TEXT NOT NULL,
+      notified_at TEXT NOT NULL,
+      PRIMARY KEY (bgg_id, listing_key)
+    );
+  `);
 }
 
 function ensureColumn(

@@ -2,9 +2,13 @@ import { useState } from "react";
 import { SummaryPage } from "./pages/SummaryPage";
 import { CollectionPage } from "./pages/CollectionPage";
 import { PlaysPage } from "./pages/PlaysPage";
-import { ActivitiesPage } from "./pages/ActivitiesPage";
+import {
+  ActivitiesPage,
+  type ActivitiesFocus,
+} from "./pages/ActivitiesPage";
 import { CommandsPage } from "./pages/CommandsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { MarketAlertsBell } from "./components/MarketAlertsBell";
 import type { CollectionQueryParams } from "./api/types";
 import type { AppMode } from "./appMode";
 import {
@@ -57,6 +61,9 @@ export default function App({ mode = "personal" }: { mode?: AppMode }) {
   ];
 
   const [activeTab, setActiveTab] = useState<TabId>("summary");
+  const [activitiesFocus, setActivitiesFocus] = useState<ActivitiesFocus | null>(
+    null,
+  );
   const [collectionFilters, setCollectionFilters] = useState<CollectionQueryParams>(
     () => collectionFiltersFromPreset("owned"),
   );
@@ -64,6 +71,11 @@ export default function App({ mode = "personal" }: { mode?: AppMode }) {
   function goToCollection(preset: CollectionPreset) {
     setCollectionFilters(collectionFiltersFromPreset(preset));
     setActiveTab("collection");
+  }
+
+  function goToMarketActivity() {
+    setActivitiesFocus("wishlist-market");
+    setActiveTab("activities");
   }
 
   return (
@@ -80,7 +92,7 @@ export default function App({ mode = "personal" }: { mode?: AppMode }) {
                 : "Tu colección y partidas de BoardGameGeek"}
             </p>
           </div>
-          <nav className="flex flex-wrap gap-2">
+          <nav className="flex flex-wrap items-center gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -95,6 +107,7 @@ export default function App({ mode = "personal" }: { mode?: AppMode }) {
                 {tab.label}
               </button>
             ))}
+            <MarketAlertsBell onOpenMarketActivity={goToMarketActivity} />
             <button
               type="button"
               onClick={() => setActiveTab("settings")}
@@ -121,7 +134,12 @@ export default function App({ mode = "personal" }: { mode?: AppMode }) {
           <CollectionPage filters={collectionFilters} onChangeFilters={setCollectionFilters} />
         ) : null}
         {activeTab === "plays" ? <PlaysPage /> : null}
-        {activeTab === "activities" ? <ActivitiesPage /> : null}
+        {activeTab === "activities" ? (
+          <ActivitiesPage
+            initialFocus={activitiesFocus}
+            onConsumedInitialFocus={() => setActivitiesFocus(null)}
+          />
+        ) : null}
         {activeTab === "commands" && !isProfile ? <CommandsPage /> : null}
         {activeTab === "settings" ? <SettingsPage mode={mode} /> : null}
       </main>

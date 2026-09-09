@@ -2,7 +2,9 @@
 
 App hecha en **TypeScript** de punta a punta: backend Node y frontend React. No hay Python, Rails ni un framework tipo Next.js.
 
-Documentos relacionados: [README.md](../README.md), [COMMANDS.md](./COMMANDS.md), [DEPLOY.md](../DEPLOY.md), [SETUP.md](../SETUP.md).
+Documentos relacionados: [README.md](../README.md), [ACTIVITIES.md](./ACTIVITIES.md), [COMMANDS.md](./COMMANDS.md), [DEPLOY.md](../DEPLOY.md), [SETUP.md](../SETUP.md).
+
+**Diagrama de runtime (Archify):** [bgg-core-runtime.html](./architecture/bgg-core-runtime.html) · especificación [bgg-core.runtime.architecture.json](./architecture/bgg-core.runtime.architecture.json).
 
 ## Vista general
 
@@ -62,7 +64,9 @@ BGG XML API  →  sync  →  SQLite  →  query  →  Hono REST  →  React
 | `GET /api/health` | Salud (personal incluye counts de DB) |
 | `/api/summary`, `/api/collection`, `/api/plays` | Consultas de ludoteca |
 | `/api/sync`, `/api/settings` | Solo Core personal |
-| `/api/activities/*` | Duel, validador, comparador, etc. |
+| `/api/activities/*` | Duel, validador, comparador, market, etc. |
+| `/api/market-watches` | Price watches (solo Core personal) |
+| `/api/cron/*` | Cron acotado (Bearer `CRON_SECRET`; p. ej. market-watches) |
 | `/api/profile/*` | Sesión, re-sync NDJSON, admin (solo Profile) |
 | `/api/bgg`, `/api/media` | Lookup/proxy BGG y media |
 
@@ -92,7 +96,9 @@ No es un sistema de extensiones de terceros. Cada actividad suele ser:
 3. Página en `web/src/pages/activities/`
 4. Registro en `src/activities/registry.ts` (las que se listan como Activity)
 
-Ejemplos: duel ranking, validador de compras, comparador de juegos, wishlist inteligente, hotness scout, qué jugar esta noche, calendario, shelf of shame.
+Catálogo completo (objetivo, deps, Personal vs Profile): [ACTIVITIES.md](./ACTIVITIES.md).
+
+Ejemplos: duel ranking, validador, comparador, wishlist inteligente / tiendas / BGG Market, hotness scout, qué jugar esta noche, calendario, shelf of shame.
 
 ## Herramientas de desarrollo y deploy
 
@@ -102,10 +108,14 @@ Ejemplos: duel ranking, validador de compras, comparador de juegos, wishlist int
 | **concurrently** | API + Vite a la vez |
 | **Docker** | Imagen de API + UI estática |
 | **Fly.io** | Hosting + volumen SQLite (`/data`) |
-| **GitHub Actions** | CI (test + build) |
+| **GitHub Actions** | CI (test + build) + cron market-watch |
+| **Resend** | Email opcional de digest de price watches |
 | **dotenv** | `.env` local |
+| **Archify** | Diagrama de arquitectura HTML/SVG |
 
 Datos sensibles (`*.db`, `.env`, `data/`) no van al git (`.gitignore`).
+
+**API externa de datos:** BoardGameGeek (`xmlapi2` + token). Las actividades de tiendas llaman además a Game Nerdz / Miniature Market (HTTP). No hay Postgres, Redis ni cola de mensajes.
 
 ### Arranque local
 
@@ -118,7 +128,7 @@ Al pedir **reiniciar** en local hay que levantar **ambas** stacks.
 
 ### Variables de entorno (resumen)
 
-Personal: `BGG_TOKEN`, `BGG_USERNAME`, `BGG_DB_PATH`, `APP_PASSWORD`, `CORS_ORIGIN`.
+Personal: `BGG_TOKEN`, `BGG_USERNAME`, `BGG_DB_PATH`, `APP_PASSWORD`, `CORS_ORIGIN`; opcionales de market: `CRON_SECRET`, `RESEND_API_KEY`, `NOTIFY_FROM_EMAIL`.
 
 Profile: las de sync BGG más `PROFILE_SESSIONS_DIR`, `PROFILE_SESSION_TTL_DAYS` (default 30), `PROFILE_MAX_SESSIONS` (10), `PROFILE_PLAYS_YEARS` (1), `PROFILE_ADMIN_PASSWORD`.
 

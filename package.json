@@ -1,6 +1,6 @@
 {
   "name": "bgg-core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Core local para sincronizar y consultar datos de BoardGameGeek",
   "type": "module",
   "scripts": {
@@ -26,7 +26,8 @@
     "db:status": "tsx scripts/db-reconcile.ts status",
     "db:pull": "tsx scripts/db-reconcile.ts pull",
     "db:push": "tsx scripts/db-reconcile.ts push",
-    "db:upload": "tsx scripts/upload-db.ts"
+    "db:upload": "tsx scripts/upload-db.ts",
+    "fly:status": "node scripts/fly-status.mjs"
   },
   "engines": {
     "node": ">=20"

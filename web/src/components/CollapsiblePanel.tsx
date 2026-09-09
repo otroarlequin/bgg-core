@@ -6,6 +6,9 @@ interface CollapsiblePanelProps {
   children: ReactNode;
   /** Shown when collapsed, e.g. active filter count */
   summary?: string;
+  /** Extra controls next to Mostrar/Ocultar (stopPropagation if clickable). */
+  actions?: ReactNode;
+  className?: string;
 }
 
 export function CollapsiblePanel({
@@ -13,27 +16,32 @@ export function CollapsiblePanel({
   defaultOpen = true,
   children,
   summary,
+  actions,
+  className = "rounded-xl border border-border bg-surface-raised/60",
 }: CollapsiblePanelProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="rounded-xl border border-border bg-surface-raised/60">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-        aria-expanded={open}
-      >
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">{title}</p>
-          {!open && summary ? (
-            <p className="mt-0.5 truncate text-xs text-muted-dim">{summary}</p>
-          ) : null}
-        </div>
-        <span className="shrink-0 text-xs font-medium text-accent">
-          {open ? "Ocultar" : "Mostrar"}
-        </span>
-      </button>
+    <div className={className}>
+      <div className="flex w-full items-center gap-2 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+          aria-expanded={open}
+        >
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink">{title}</p>
+            {!open && summary ? (
+              <p className="mt-0.5 truncate text-xs text-muted-dim">{summary}</p>
+            ) : null}
+          </div>
+          <span className="shrink-0 text-xs font-medium text-accent">
+            {open ? "Ocultar" : "Mostrar"}
+          </span>
+        </button>
+        {actions ? <div className="shrink-0">{actions}</div> : null}
+      </div>
       {open ? <div className="border-t border-border p-4">{children}</div> : null}
     </div>
   );

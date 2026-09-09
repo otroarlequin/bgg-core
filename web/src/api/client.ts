@@ -20,6 +20,10 @@ import type {
   SmartWishlistMode,
   HotnessScoutResult,
   WishlistStoreMatchResult,
+  WishlistMarketResult,
+  MarketSortBy,
+  MarketPriceWatch,
+  MarketWatchWishlistOption,
   StoreId,
   SyncApiResult,
   AppSettings,
@@ -265,6 +269,24 @@ export function postWishlistStoreMatch(body: {
   });
 }
 
+export function postWishlistMarket(body: {
+  action?: "scan" | "status" | "listAlerts" | "markAlertsRead";
+  forceRefresh?: boolean;
+  maxItems?: number;
+  minPriority?: number;
+  conditions?: string[];
+  maxPrice?: number;
+  currencies?: string[];
+  sortBy?: MarketSortBy;
+  alertIds?: number[];
+}): Promise<WishlistMarketResult> {
+  return fetchJson("/api/activities/wishlist-market", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export function triggerSync(params: {
   collection?: boolean;
   plays?: boolean;
@@ -281,14 +303,62 @@ export function fetchSettings(): Promise<AppSettings> {
 }
 
 export function updateSettings(params: {
-  bggUsername: string;
+  bggUsername?: string;
   confirmReplace?: boolean;
+  notifyEmail?: string | null;
+  marketWatchCronEnabled?: boolean;
 }): Promise<UpdateSettingsResult> {
   return fetchJson("/api/settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   });
+}
+
+export function fetchMarketWatches(): Promise<{ watches: MarketPriceWatch[] }> {
+  return fetchJson("/api/market-watches");
+}
+
+export function fetchMarketWatchWishlistOptions(): Promise<{
+  wishlist: MarketWatchWishlistOption[];
+}> {
+  return fetchJson("/api/market-watches/wishlist-options");
+}
+
+export function upsertMarketWatch(
+  bggId: number,
+  body: {
+    maxPrice: number;
+    tolerancePct?: number;
+    currency?: string;
+    enabled?: boolean;
+  },
+): Promise<{ watch: MarketPriceWatch }> {
+  return fetchJson(`/api/market-watches/${bggId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function patchMarketWatch(
+  bggId: number,
+  body: {
+    maxPrice?: number;
+    tolerancePct?: number;
+    currency?: string;
+    enabled?: boolean;
+  },
+): Promise<{ watch: MarketPriceWatch }> {
+  return fetchJson(`/api/market-watches/${bggId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteMarketWatch(bggId: number): Promise<{ ok: boolean }> {
+  return fetchJson(`/api/market-watches/${bggId}`, { method: "DELETE" });
 }
 
 export interface ProfileSessionView {

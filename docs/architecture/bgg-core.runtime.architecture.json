@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "bgg-core — arquitectura de runtime",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/otroarlequin/bgg-core",
+      "provider": "github",
+      "revision": "ec6cc43b89ed45e8d7f25bc897906372b38ccb4e"
+    },
+    "views": [
+      {
+        "id": "request-path",
+        "label": "Petición de lectura",
+        "focus": ["browser", "react_spa", "auth_gate", "hono_api", "query_layer", "sqlite_store"],
+        "note": "Camino principal: UI → auth → Hono → query → SQLite."
+      },
+      {
+        "id": "bgg-ingest",
+        "label": "Ingesta desde BGG",
+        "focus": ["bgg_api", "bgg_client", "sync_pipeline", "sqlite_store", "hono_api"],
+        "note": "La ludoteca se materializa en SQLite; el sync se dispara desde API o CLI."
+      },
+      {
+        "id": "trust-hosting",
+        "label": "Confianza y hosting",
+        "focus": ["browser", "auth_gate", "hono_api", "sqlite_store", "fly_host"],
+        "note": "El perímetro de confianza es la instancia; BGG y el navegador quedan fuera."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Navegador",
+      "sublabel": "usuario",
+      "pos": [48, 310],
+      "size": [128, 60]
+    },
+    {
+      "id": "react_spa",
+      "type": "frontend",
+      "label": "React SPA",
+      "sublabel": "Vite + Tailwind",
+      "brand": "react",
+      "tag": "web/",
+      "pos": [240, 310],
+      "size": [136, 62],
+      "sources": [
+        { "path": "web/src/App.tsx", "line": 1, "label": "UI root" },
+        { "path": "web/src/api/client.ts", "line": 1, "label": "HTTP client" }
+      ]
+    },
+    {
+      "id": "auth_gate",
+      "type": "security",
+      "label": "Auth",
+      "sublabel": "Basic / cookie",
+      "tag": "trust edge",
+      "pos": [440, 310],
+      "size": [132, 62],
+      "sources": [
+        { "path": "src/api/auth.ts", "line": 17, "label": "Basic Auth" },
+        { "path": "src/api/context.ts", "line": 10, "label": "DB ALS" }
+      ]
+    },
+    {
+      "id": "hono_api",
+      "type": "backend",
+      "label": "Hono REST",
+      "sublabel": ":3001 / :3002",
+      "tag": "API",
+      "pos": [680, 310],
+      "size": [136, 62],
+      "sources": [
+        { "path": "src/api/server.ts", "line": 28, "label": "Personal" },
+        { "path": "src/api/profile-server.ts", "line": 1, "label": "Profile" }
+      ]
+    },
+    {
+      "id": "query_layer",
+      "type": "backend",
+      "label": "Query + Activities",
+      "sublabel": "análisis local",
+      "tag": "domain",
+      "pos": [900, 310],
+      "size": [150, 62],
+      "sources": [
+        { "path": "src/query/index.ts", "line": 1, "label": "consultas" },
+        { "path": "src/activities/registry.ts", "line": 1, "label": "registry" }
+      ]
+    },
+    {
+      "id": "sqlite_store",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "node:sqlite + WAL",
+      "brand": "sqlite",
+      "tag": "durable state",
+      "pos": [1140, 310],
+      "size": [140, 62],
+      "sources": [
+        { "path": "src/storage/database.ts", "line": 10, "label": "createDatabase" }
+      ]
+    },
+    {
+      "id": "sync_pipeline",
+      "type": "backend",
+      "label": "Sync",
+      "sublabel": "colección / plays / things",
+      "tag": "ingest",
+      "pos": [900, 120],
+      "size": [150, 62],
+      "sources": [
+        { "path": "src/sync/index.ts", "line": 1, "label": "exports" }
+      ]
+    },
+    {
+      "id": "bgg_client",
+      "type": "backend",
+      "label": "Cliente BGG",
+      "sublabel": "bgg-api-ts",
+      "tag": "mapper",
+      "pos": [680, 120],
+      "size": [136, 62],
+      "sources": [
+        { "path": "src/bgg/index.ts", "line": 1, "label": "createBggClient" }
+      ]
+    },
+    {
+      "id": "bgg_api",
+      "type": "external",
+      "label": "BGG XML API",
+      "sublabel": "xmlapi2 + token",
+      "pos": [440, 120],
+      "size": [140, 62]
+    },
+    {
+      "id": "fly_host",
+      "type": "cloud",
+      "label": "Fly.io",
+      "sublabel": "app + volumen /data",
+      "brand": "fly-io",
+      "tag": "hosting",
+      "pos": [1140, 500],
+      "size": [140, 62]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Instancia de producto (Personal o Profile)",
+      "wraps": [
+        "react_spa",
+        "auth_gate",
+        "hono_api",
+        "query_layer",
+        "sync_pipeline",
+        "bgg_client",
+        "sqlite_store"
+      ],
+      "pad": 22
+    },
+    {
+      "kind": "security-group",
+      "label": "Perímetro de confianza de datos",
+      "wraps": ["auth_gate", "hono_api", "query_layer", "sqlite_store"],
+      "pad": 14
+    }
+  ],
+  "connections": [
+    {
+      "id": "req-browser-ui",
+      "from": "browser",
+      "to": "react_spa",
+      "label": "HTTPS / Vite",
+      "variant": "emphasis"
+    },
+    {
+      "id": "req-ui-auth",
+      "from": "react_spa",
+      "to": "auth_gate",
+      "label": "/api/*",
+      "variant": "emphasis"
+    },
+    {
+      "id": "req-auth-hono",
+      "from": "auth_gate",
+      "to": "hono_api",
+      "label": "autoriza",
+      "variant": "security",
+      "labelDy": 55
+    },
+    {
+      "id": "req-hono-query",
+      "from": "hono_api",
+      "to": "query_layer",
+      "label": "consulta",
+      "variant": "emphasis"
+    },
+    {
+      "id": "req-query-db",
+      "from": "query_layer",
+      "to": "sqlite_store",
+      "label": "SQL",
+      "variant": "emphasis",
+      "labelDy": -28
+    },
+    {
+      "id": "ingest-bgg",
+      "from": "bgg_api",
+      "to": "bgg_client",
+      "label": "XML"
+    },
+    {
+      "id": "ingest-client-sync",
+      "from": "bgg_client",
+      "to": "sync_pipeline",
+      "label": "dominio"
+    },
+    {
+      "id": "ingest-sync-db",
+      "from": "sync_pipeline",
+      "to": "sqlite_store",
+      "label": "upsert",
+      "fromSide": "right",
+      "toSide": "top",
+      "labelDx": 36
+    },
+    {
+      "id": "host-fly-db",
+      "from": "fly_host",
+      "to": "sqlite_store",
+      "label": "volumen",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Dos productos, un código",
+      "items": [
+        "Personal (bgg-core): SQLite durable, Basic Auth, :3001 / :5173",
+        "Profile (bgg-profile): sesión cookie + SQLite por visitante (ALS), :3002 / :5174/profile",
+        "En producción Hono también sirve web/dist estático"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Confianza y límites",
+      "items": [
+        "Solo BGG es dependencia de datos externa (token BGG_TOKEN)",
+        "Auth Personal = APP_PASSWORD; Profile = cookie bgg_profile_sid",
+        "Fly.io aloja la instancia y persiste /data; el navegador y BGG quedan fuera del perímetro"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Detalle sin más aristas",
+      "items": [
+        "Sync también desde CLI (src/cli) y rutas /api/sync o /api/profile/sync",
+        "Activities = query + registro + página React (no plugins de terceros)",
+        "Cron de market-watch vía GitHub Actions → /api/cron (Personal)"
+      ]
+    }
+  ]
+}

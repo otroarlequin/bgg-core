@@ -1,8 +1,21 @@
 # bgg-core
 
-App local para sincronizar, explorar y analizar tu ludoteca de [BoardGameGeek](https://boardgamegeek.com): colección, partidas y actividades (duelo, validador, wishlist, hotness, etc.).
+App para sincronizar, explorar y analizar tu ludoteca de [BoardGameGeek](https://boardgamegeek.com): colección, partidas y actividades (duelo, validador, wishlist, market, etc.).
 
 Stack: **TypeScript** · **SQLite** · **Hono** (API) · **React + Vite + Tailwind** (UI).
+
+**Hito actual: [0.3.0 — Profile compartido](./CHANGELOG.md#030--2026-09-09)** — la variante multi-visitante se comparte con más personas vía Profile, junto al core personal.
+
+## Dos productos
+
+| | Personal (`bgg-core`) | Profile (`bgg-profile`) |
+|---|---|---|
+| Idea | Tu ludoteca, SQLite durable | Visitantes, sesión temporal |
+| Local | [http://127.0.0.1:5173/](http://127.0.0.1:5173/) | [http://127.0.0.1:5174/profile](http://127.0.0.1:5174/profile) |
+| Fly | [bgg-core.fly.dev](https://bgg-core.fly.dev) | [bgg-profile.fly.dev/profile](https://bgg-profile.fly.dev/profile) |
+| Arranque | `npm run dev` | `npm run dev:profile:all` |
+
+No abras la raíz de `:5174` como si fuera personal: ese Vite es modo Profile.
 
 ## Requisitos
 
@@ -25,7 +38,7 @@ npm run sync:things
 npm run sync:plays
 ```
 
-## Interfaz web
+## Interfaz web (Personal)
 
 ```bash
 npm run dev
@@ -38,44 +51,35 @@ Abre [http://localhost:5173](http://localhost:5173). La UI habla con la API loca
 | **Resumen** | Totales de colección/partidas, H-Index, tops (presencial vs virtual) |
 | **Colección** | Filtros, ordenación y cards ricas (stats, créditos, Base/Exp, link BGG) |
 | **Partidas** | Historial filtrable por fechas, ganadores e incompletas |
-| **Actividades** | Duel, validador, wishlist inteligente, hotness scout, etc. |
+| **Actividades** | Diez herramientas (validador, comparador, wishlist, market, duel, mesa…) |
 | **Comandos** | Referencia de operación (sync BGG, reconcile local↔Fly, deploy) |
-| **Configuración** (⚙) | Tema visual y preferencias locales |
+| **Configuración** (⚙) | Cuenta BGG, sync, temas, alertas Market / price watches |
 
-Botón **Sincronizar con BGG** en el header: refresca colección + partidas (`POST /api/sync`).
+Catálogo detallado de actividades: **[docs/ACTIVITIES.md](./docs/ACTIVITIES.md)**.
 
 ## Comandos de operación
 
-Guía completa (arranque, sync BGG, reconcile, deploy, flags):
+Guía completa (arranque, sync BGG, reconcile, deploy, wipe de sesiones Profile, flags):
 
 → **[docs/COMMANDS.md](./docs/COMMANDS.md)**
 
-Resumen rápido:
-
 ```bash
-# Sync BGG (también: botón en la UI / POST /api/sync)
-npm run sync:collection
-npm run sync:plays
-npm run sync:things
-
-# Reconcile local ↔ Fly (datos de app: duels, reviews)
-npm run db:status
-npm run db:pull
-npm run db:push
-
-# App local
+npm run sync:collection && npm run sync:plays && npm run sync:things
+npm run db:status && npm run db:pull   # o db:push
+npm run fly:status                     # resumen máquinas Fly
 npm run dev
-npm test
-npm run build:all
+npm run dev:profile:all
+npm test && npm run build:all
 ```
 
-Deploy y secrets Fly: **[DEPLOY.md](./DEPLOY.md)**.
+Deploy y secrets: **[DEPLOY.md](./DEPLOY.md)**.
 
 ## Arquitectura
 
-Stack y dos productos (Core personal + Profile), capas `sync` → SQLite → `query` → Hono → React, librerías y deploy:
+Capas `BGG → sync → SQLite → query → Hono → React`, dos productos, trust boundaries:
 
-→ **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**
+→ **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**  
+→ Diagrama interactivo: **[docs/architecture/bgg-core-runtime.html](./docs/architecture/bgg-core-runtime.html)**
 
 ```
 src/sync/        Ingesta BGG → SQLite
@@ -83,7 +87,7 @@ src/query/       Consultas locales
 src/api/         REST (Hono); personal vs profile-server
 src/activities/  Actividades (duel, validador, comparador, …)
 src/profile/     Sesiones temporales (solo app Profile)
-docs/            Guías de operación y arquitectura
+docs/            Guías de operación, actividades y arquitectura
 web/             UI React (temas Ónix / Grafito / Cartón)
 ```
 

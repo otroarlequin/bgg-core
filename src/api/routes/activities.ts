@@ -21,6 +21,10 @@ import {
   runWishlistStoreMatch,
   type WishlistStoreMatchRunParams,
 } from "../../activities/wishlist-store-match/index.js";
+import {
+  runWishlistMarket,
+  type WishlistMarketRunParams,
+} from "../../activities/wishlist-market/index.js";
 import type { SmartWishlistMode } from "../../query/smart-wishlist.js";
 import { getActivityContext } from "../context.js";
 
@@ -189,6 +193,17 @@ activitiesRoutes.post("/wishlist-store-match", async (c) => {
   const body = (await c.req.json()) as WishlistStoreMatchRunParams;
   try {
     const result = await runWishlistStoreMatch(body, getActivityContext());
+    return c.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ message }, 400);
+  }
+});
+
+activitiesRoutes.post("/wishlist-market", async (c) => {
+  const body = (await c.req.json()) as WishlistMarketRunParams;
+  try {
+    const result = await runWishlistMarket(body, getActivityContext());
     return c.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

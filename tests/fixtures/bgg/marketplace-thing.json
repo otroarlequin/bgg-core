@@ -1,0 +1,75 @@
+{
+  "items": {
+    "item": [
+      {
+        "id": "266192",
+        "name": [{ "type": "primary", "value": "Wingspan" }],
+        "marketplacelistings": {
+          "listing": [
+            {
+              "listdate": { "value": "Mon, 01 Sep 2025 12:00:00 +0000" },
+              "price": { "currency": "USD", "value": "45.00" },
+              "condition": { "value": "new" },
+              "notes": { "value": "" },
+              "link": [
+                {
+                  "href": "https://boardgamegeek.com/market/product/111",
+                  "title": "marketlisting"
+                }
+              ]
+            },
+            {
+              "listdate": { "value": "Sun, 31 Aug 2025 10:00:00 +0000" },
+              "price": { "currency": "USD", "value": "39.50" },
+              "condition": { "value": "verygood" },
+              "notes": { "value": "played once" },
+              "link": [
+                {
+                  "href": "https://boardgamegeek.com/market/product/222",
+                  "title": "marketlisting"
+                }
+              ]
+            },
+            {
+              "listdate": { "value": "Sat, 30 Aug 2025 08:00:00 +0000" },
+              "price": { "currency": "EUR", "value": "55.00" },
+              "condition": { "value": "new" },
+              "notes": { "value": "" },
+              "link": [
+                {
+                  "href": "/market/product/333",
+                  "title": "marketlisting"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "192827",
+        "name": [{ "type": "primary", "value": "Rum" }],
+        "marketplacelistings": {
+          "listing": []
+        }
+      },
+      {
+        "id": "1",
+        "name": [{ "type": "primary", "value": "Legacy marketplace key" }],
+        "marketplace": {
+          "listing": [
+            {
+              "listdate": { "value": "Mon, 01 Sep 2025 12:00:00 +0000" },
+              "price": { "currency": "USD", "value": "10" },
+              "condition": { "value": "good" },
+              "notes": { "value": "" },
+              "link": {
+                "href": "https://boardgamegeek.com/geekmarket/product/999",
+                "title": "marketlisting"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

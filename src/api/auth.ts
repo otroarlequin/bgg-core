@@ -1,5 +1,6 @@
 import { createMiddleware } from "hono/factory";
 import { timingSafeEqual } from "node:crypto";
+import { isValidCronRequest } from "./cron-auth.js";
 
 function safeEqual(a: string, b: string): boolean {
   const aBuf = Buffer.from(a);
@@ -16,6 +17,10 @@ function safeEqual(a: string, b: string): boolean {
 export function sharedPasswordAuth() {
   return createMiddleware(async (c, next) => {
     if (c.req.method === "GET" && c.req.path === "/api/health") {
+      return next();
+    }
+
+    if (isValidCronRequest(c)) {
       return next();
     }
 

@@ -84,10 +84,38 @@ npm run db:push -- --local-only --old ./tmp/remote.db --out ./data/bgg-merged.db
 Detalle completo: [DEPLOY.md](../DEPLOY.md).
 
 ```bash
-fly deploy
+fly deploy -a bgg-core
+fly deploy -c fly.profile.toml -a bgg-profile
 fly secrets set BGG_TOKEN="…" BGG_USERNAME="…" APP_PASSWORD="…" -a bgg-core
 fly apps restart bgg-core
 fly machine start -a bgg-core   # si está dormida
+npm run fly:status              # resumen de ambas apps
+```
+
+### Wipe de sesiones Profile (pizarra limpia)
+
+Borra SQLite de visitantes en el volumen de `bgg-profile` (irreversible para esas sesiones).
+
+**Preferido — admin API** (requiere `PROFILE_ADMIN_PASSWORD` en Fly):
+
+```bash
+# Listar
+curl -sS "https://bgg-profile.fly.dev/api/profile/admin/sessions" \
+  -H "x-profile-admin-password: $PROFILE_ADMIN_PASSWORD"
+
+# Borrar una
+curl -sS -X DELETE "https://bgg-profile.fly.dev/api/profile/admin/sessions/<id>" \
+  -H "x-profile-admin-password: $PROFILE_ADMIN_PASSWORD"
+```
+
+UI: `https://bgg-profile.fly.dev/profile/admin`.
+
+**Fallback — SSH al volumen:**
+
+```bash
+fly machine start -a bgg-profile
+fly ssh console -a bgg-profile -C "rm -rf /data/sessions/*"
+fly apps restart bgg-profile
 ```
 
 ## Otros CLI
@@ -95,11 +123,50 @@ fly machine start -a bgg-core   # si está dormida
 ```bash
 npm run query:collection -- --own --min-rating 8
 npm run activity:duel -- create --from 2026-01-01 --to 2026-06-30
+npm run fly:status
 npm test
 npm run build:all
 ```
 
+## Monitoreo Fly (consumo)
+
+| Opción | Cómo |
+|--------|------|
+| Tiempo real | Dashboard Fly + [fly-metrics.net](https://fly-metrics.net) (Grafana gestionado) |
+| On-demand | `npm run fly:status` (máquinas `bgg-core` + `bgg-profile`) |
+
+## Alertas BGG Market (v2 — cron + email)
+
+Vigila **solo** juegos con umbral de precio configurado en la UI (máx. 40). Cron recomendado **2×/día**; la máquina Fly se despierta, evalúa y vuelve a dormir (coste ≈ centavos/mes).
+
+| Variable | Uso |
+|----------|-----|
+| `CRON_SECRET` | Bearer para `POST /api/cron/market-watches` (sin Basic Auth) |
+| `RESEND_API_KEY` | Envío de digest por email (Resend) |
+| `NOTIFY_FROM_EMAIL` | Remitente verificado en Resend |
+| `notify_email` (DB) | Destinatario en Configuración → Alertas BGG Market |
+| `market_watch_cron_enabled` (DB) | Toggle cron en Configuración |
+
+### Secrets Fly
+
+```bash
+fly secrets set CRON_SECRET="…" RESEND_API_KEY="re_…" NOTIFY_FROM_EMAIL="alertas@tudominio.com" -a bgg-core
+```
+
+### Scheduler (GitHub Actions u otro)
+
+Dispara 2×/día (ej. 08:00 y 20:00 UTC):
+
+```bash
+curl -sf -X POST "https://bgg-core.fly.dev/api/cron/market-watches" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+La ruta **no** usa `APP_PASSWORD`; solo `CRON_SECRET`. El scan manual de Market sigue siendo on-demand.
+
+API watches: `GET/PUT/PATCH/DELETE /api/market-watches`.
+
 ## Qué no hacer
 
 - No subas un `.db` local a Fly con `sftp put` manual sin merge: puedes perder `duel_*` y `purchase_reviews`.
-- No uses sync continuo/cron: el diseño es on-demand para no gastar Fly ni rate limit de BGG.
+- No uses sync continuo/cron general: el único cron previsto es el de **price watches** (acotado).

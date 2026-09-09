@@ -7,6 +7,10 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-09
+
+Hito **Profile compartido**: la variante multi-visitante se publica como la versión compartida con más personas (`bgg-profile`), junto con el core personal. Incluye admin de sesiones, market watches y documentación de arquitectura/actividades.
+
 ### Added
 - **BGG Profile** (deploy aparte): sesión por visitante (`/profile`), sync collection+plays+things, rate limit, SQLite en volumen; duel y validador sin persistencia durable; `Dockerfile.profile` + `fly.profile.toml`.
 - Scripts locales `dev:profile` / `dev:profile:all` (API `:3002` + Vite `:5174`).
@@ -14,19 +18,25 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Profile **admin oculto** (`/profile/admin` + API list/kill) con `PROFILE_ADMIN_PASSWORD`.
 - Actividad **Comparador de juegos**: hasta 4 títulos BGG lado a lado (ficha, similitud Jaccard, diferencias resaltadas); `POST /api/activities/game-compare`.
 - Actividad **Wishlist × tiendas**: búsqueda en vivo en Game Nerdz y Miniature Market por ítem de wishlist, match por título, caché SQLite 24h y rate limit; `POST /api/activities/wishlist-store-match` (uso personal local; sin Amazon ni CSV).
+- Actividad **Wishlist × BGG Market**: ofertas GeekMarket para la wishlist, novedades in-app al escanear; `POST /api/activities/wishlist-market`.
+- **Price watches / alertas**: umbrales de precio (máx. 40), panel en Configuración, campana in-app; cron `POST /api/cron/market-watches` con `CRON_SECRET`; email opcional vía Resend; workflow GitHub Actions 2×/día.
+- Documentación: [`docs/ACTIVITIES.md`](./docs/ACTIVITIES.md), diagrama Archify de runtime ([`docs/architecture/bgg-core-runtime.html`](./docs/architecture/bgg-core-runtime.html)), ampliación de arquitectura/comandos/deploy.
+- Script on-demand `npm run fly:status` para resumen de máquinas `bgg-core` + `bgg-profile`.
 
 ### Changed
 - Contexto de DB por request (`AsyncLocalStorage`) para aislar sesiones profile del core personal.
 - Validador: `persist: false` / `APP_MODE=profile` bloquea save y wishlist durable.
-- Proxy Vite: rutas desde `/profile` van a la API profile; stub claro en la API personal si falta `:3002`.
+- Proxy Vite: rutas desde `/profile` van a la API profile; stub claro en la API personal si falta `:3002`; modo Profile redirige `/` → `/profile`.
 - **Profile:** TTL idle **30 días** (`PROFILE_SESSION_TTL_DAYS`); cuota **10** sesiones; partidas **1 año** (`PROFILE_PLAYS_YEARS`); things solo prioritarios; progreso NDJSON + barra en la UI.
 - Hub **Actividades**: rejilla de 3 columnas, cards centradas (icono + título), tipografía más legible y orden reagrupado (validador / wishlist / mesa).
-- **Wishlist × tiendas — matching:** score más estricto (tokens numéricos de edición, sin substring, umbrales 0.90/0.70); editorial BGG vs publisher GN (`product_data.publishers`) y Manufacturer de ficha MM; prioridad en UI como texto BGG (Must have…).
+- **Wishlist × tiendas — matching:** score más estricto (tokens numéricos de edición, sin substring, umbrales 0.90/0.70); editorial BGG vs publisher GN y Manufacturer MM; prioridad en UI como texto BGG.
+- Validador UX: tooltip de atributos, filtros de overlap (owned + expansiones por defecto), chips deseleccionables.
 
 ### Fixed
 - `decodeHtmlEntities` / `stripHtmlToText` toleran payloads BGG no-string (evita `text.replace is not a function` al sincronizar plays/things).
 - Profile en Fly: sesiones persistidas en volumen (`/data/sessions`) para sobrevivir reinicios; más RAM y grace period de health; UI vuelve al login si llega un 401 de sesión.
 - Wishlist × tiendas: falsos positivos de título corto/edición (p. ej. Rum→miniaturas, Compile Main 2→Main 1).
+- Cursor I-beam solo en campos editables (regla global CSS).
 
 ## [0.2.0] — 2026-07-31
 
@@ -112,7 +122,8 @@ Primer release público del core local BGG + interfaz web.
 - Los datos locales (`*.db`, `.env`, `data/`) no se versionan.
 - No se incluye exposición vía túnel/LAN en este release (retirado a propósito).
 
-[Unreleased]: https://github.com/otroarlequin/bgg-core/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/otroarlequin/bgg-core/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/otroarlequin/bgg-core/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/otroarlequin/bgg-core/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/otroarlequin/bgg-core/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/otroarlequin/bgg-core/releases/tag/v0.1.0

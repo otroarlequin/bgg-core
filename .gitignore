@@ -7,3 +7,4 @@ output/
 *.db-journal
 .cursor/
 *.tsbuildinfo
+docs/architecture/*.visual-check.*

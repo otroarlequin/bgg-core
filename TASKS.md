@@ -4,14 +4,15 @@ Backlog y decisiones de producto para bgg-core.
 
 ## Pendiente
 
-1. **Publicar CI en GitHub** — commit local `856aa54` listo; falta `gh auth refresh -s workflow` y `git push`.
+_(vacío tras el release 0.3.0)_
 
 ## Diferido
 
-- **Auth por sesión / cookie:** dejar Basic Auth y pasar a login con cookie/sesión compartida (mejor UX móvil).
+- **Auth por sesión / cookie (Personal):** dejar Basic Auth y pasar a login con cookie/sesión compartida (mejor UX móvil).
 - **Export “sugerencia de la noche”:** tarjeta PNG de Qué jugar esta noche (descartado en v1; se puede retomar).
 - **Export Shelf of shame / validador / heatmap:** no en v1.
 - **Comparador:** más de 4 slots, persistir comparaciones, export PNG.
+- **Informe diario Fly automatizado:** Action/cron + email (opcional; hoy basta `fly:status` + fly-metrics.net).
 
 ## Descartado
 
@@ -19,25 +20,22 @@ Backlog y decisiones de producto para bgg-core.
 
 ## Hecho reciente
 
+### Hito 0.3.0 — Profile compartido
+- Profile multi-visitante (TTL 30d, cuota 10, re-sync, admin, persistencia en volumen Fly).
+- Comparador de juegos; Wishlist × tiendas; Wishlist × BGG Market + price watches/cron/Resend.
+- Docs: ACTIVITIES, ARCHITECTURE + diagrama Archify, wipe de sesiones, `npm run fly:status`.
+- CI + market-watch cron en GitHub Actions publicados con el push del hito.
+
 ### Internos / plataforma
-- Deploy Fly + Basic Auth + secrets BGG para el validador.
+- Deploy Fly + Basic Auth + secrets BGG.
 - Health enriquecido (`dbOk`, counts, `ts`).
-- `npm run db:upload` con merge de `duel_sessions` / `duel_rounds` / `purchase_reviews`.
-- Tests de overlap validador / filtros duel / queries nuevas.
-- Workflow CI escrito (Node 22); **aún no está en el remoto**.
+- Reconcile local ↔ Fly fail-closed.
+- Tests de overlap validador / filtros duel / market / wishlist.
 
 ### UI
 - Selector de tema (Ónix / Grafito / Cartón); `GameCard` / `BggLink` / badges Base–Exp.
 - Mobile: matches del validador y partidas como cards; targets táctiles mayores.
+- Hub Actividades en rejilla 3 columnas.
 
 ### Actividades
-- Duel ranking + Validador de compras (previos).
-- **Comparador de juegos** — hasta 4 títulos BGG lado a lado (ficha, similitud, diferencias); añadir a la derecha.
-- **Shelf of shame** — owned sin partidas, antiguos primero.
-- **Qué jugar esta noche** — score + reshuffle; filtros jugadores (rango amplio), tiempo, peso, categorías, mecánicas, idioma; pool filtrado real + indicador `poolTotal`.
-- **Calendario / rachas** — heatmap horizontal sin scroll H, etiquetas de mes, separadores mes/año, presets (1/3/6/12 meses), filtro de fechas, detalle de partida expandible en la misma vista.
-- **Wishlist inteligente** — perfil + gaps, ranking local con razones y modos (sin discovery de red).
-- **Hotness scout** — hot list BGG vs perfil owned; requiere `BGG_TOKEN`.
-- **Sync BGG on-demand** — botón + `POST /api/sync` (colección/partidas); no toca datos de app.
-- **Reconcile local ↔ Fly** — `db:status` / `db:pull` / `db:push` con union fail-closed.
-- **Export / compartir (v1)** — PNG + texto: ganador del duel; tops presencial/virtual del resumen.
+- Ver catálogo en [`docs/ACTIVITIES.md`](./docs/ACTIVITIES.md).

@@ -5,6 +5,7 @@ import { purchaseValidatorActivity } from "./purchase-validator/index.js";
 import { gameCompareActivity } from "./game-compare/index.js";
 import { smartWishlistActivity } from "./smart-wishlist/index.js";
 import { wishlistStoreMatchActivity } from "./wishlist-store-match/index.js";
+import { wishlistMarketActivity } from "./wishlist-market/index.js";
 
 const activities: Activity<unknown, unknown>[] = [
   pairwiseDuelActivity as Activity<unknown, unknown>,
@@ -13,6 +14,7 @@ const activities: Activity<unknown, unknown>[] = [
   smartWishlistActivity as Activity<unknown, unknown>,
   hotnessScoutActivity as Activity<unknown, unknown>,
   wishlistStoreMatchActivity as Activity<unknown, unknown>,
+  wishlistMarketActivity as Activity<unknown, unknown>,
 ];
 
 const registry = new Map(activities.map((a) => [a.id, a]));

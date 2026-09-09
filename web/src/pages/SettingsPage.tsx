@@ -194,11 +194,21 @@ export function SettingsPage({ mode = "personal" }: { mode?: AppMode }) {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
+  const [notifyEmailDraft, setNotifyEmailDraft] = useState("");
+  const [cronEnabledDraft, setCronEnabledDraft] = useState(true);
+  const [notifySaving, setNotifySaving] = useState(false);
+  const [notifyMessage, setNotifyMessage] = useState<string | null>(null);
+  const [notifyError, setNotifyError] = useState<string | null>(null);
+
   useEffect(() => {
     if (settingsQuery.data?.bggUsername != null) {
       setUsernameDraft(settingsQuery.data.bggUsername);
     } else if (settingsQuery.data && settingsQuery.data.bggUsername == null) {
       setUsernameDraft("");
+    }
+    if (settingsQuery.data) {
+      setNotifyEmailDraft(settingsQuery.data.notifyEmail ?? "");
+      setCronEnabledDraft(settingsQuery.data.marketWatchCronEnabled);
     }
   }, [settingsQuery.data]);
 
@@ -240,16 +250,6 @@ export function SettingsPage({ mode = "personal" }: { mode?: AppMode }) {
     }
   }
 
-  async function handleSaveUsername(e: FormEvent) {
-    e.preventDefault();
-    const next = usernameDraft.trim();
-    if (!next) {
-      setSaveError("El username no puede estar vacío.");
-      return;
-    }
-    await persistUsername(next);
-  }
-
   async function handleSync() {
     setSyncing(true);
     setSyncMessage(null);
@@ -278,6 +278,37 @@ export function SettingsPage({ mode = "personal" }: { mode?: AppMode }) {
       setSyncMessage(err instanceof Error ? err.message : "Error al sincronizar");
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function handleSaveUsername(e: FormEvent) {
+    e.preventDefault();
+    const next = usernameDraft.trim();
+    if (!next) {
+      setSaveError("El username no puede estar vacío.");
+      return;
+    }
+    await persistUsername(next);
+  }
+
+  async function handleSaveNotifications(e: FormEvent) {
+    e.preventDefault();
+    setNotifySaving(true);
+    setNotifyError(null);
+    setNotifyMessage(null);
+    try {
+      await updateSettings({
+        notifyEmail: notifyEmailDraft.trim() || null,
+        marketWatchCronEnabled: cronEnabledDraft,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["settings"] });
+      setNotifyMessage("Notificaciones Market guardadas.");
+    } catch (err) {
+      setNotifyError(
+        err instanceof Error ? err.message : "No se pudieron guardar",
+      );
+    } finally {
+      setNotifySaving(false);
     }
   }
 
@@ -388,6 +419,69 @@ export function SettingsPage({ mode = "personal" }: { mode?: AppMode }) {
             <p className="max-w-xl text-sm text-muted">{syncMessage}</p>
           ) : null}
         </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface-raised/40 p-4">
+        <h3 className="text-sm font-semibold text-ink">Alertas BGG Market</h3>
+        <p className="mt-1 text-xs text-muted">
+          Email para digests cuando el cron detecte ofertas dentro de tus
+          umbrales de precio. En Fly hace falta{" "}
+          <code className="text-ink-soft">RESEND_API_KEY</code> y{" "}
+          <code className="text-ink-soft">NOTIFY_FROM_EMAIL</code> (dominio
+          verificado en Resend).
+        </p>
+        {settingsQuery.isLoading ? (
+          <p className="mt-4 text-sm text-muted">Cargando…</p>
+        ) : (
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={(e) => void handleSaveNotifications(e)}
+          >
+            <label className="block">
+              <span className="text-xs font-medium text-muted">
+                Email de notificaciones
+              </span>
+              <input
+                type="email"
+                value={notifyEmailDraft}
+                onChange={(e) => setNotifyEmailDraft(e.target.value)}
+                placeholder="tu@email.com"
+                className="mt-1 w-full max-w-sm rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={cronEnabledDraft}
+                onChange={(e) => setCronEnabledDraft(e.target.checked)}
+              />
+              Cron automático 2×/día (solo juegos con alerta de precio)
+            </label>
+            {settings?.resendConfigured ? (
+              <p className="text-xs text-accent-secondary">
+                Resend configurado en el servidor.
+              </p>
+            ) : (
+              <p className="text-xs text-muted">
+                Email desactivado en servidor (falta Resend). Las alertas in-app
+                siguen funcionando al escanear o con cron.
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={notifySaving}
+              className="min-h-11 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-ink hover:bg-accent-hover disabled:opacity-50 md:min-h-0"
+            >
+              {notifySaving ? "Guardando…" : "Guardar notificaciones"}
+            </button>
+            {notifyMessage ? (
+              <p className="text-sm text-accent-secondary">{notifyMessage}</p>
+            ) : null}
+            {notifyError ? (
+              <p className="text-sm text-red-400">{notifyError}</p>
+            ) : null}
+          </form>
+        )}
       </section>
 
       <section className="rounded-xl border border-border bg-surface-raised/40 p-4">

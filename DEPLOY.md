@@ -152,3 +152,31 @@ fly deploy -c fly.profile.toml -a bgg-profile
 - Secrets: `BGG_TOKEN` (obligatorio), `PROFILE_ADMIN_PASSWORD` (admin). Volumen propio `bgg_profile_sessions` → `/data` (sesiones); no el de `bgg-core`.
 - Rate limit: creaciones de sesión por IP; tope global de sesiones concurrentes (default 10).
 - Local: `npm run dev:profile:all` y abre `http://localhost:5174/profile` (admin: `…/profile/admin`).
+
+### Wipe de todas las sesiones (Profile)
+
+Útil antes de compartir una versión nueva (pizarra limpia). Irreversible para los SQLite de visitantes.
+
+1. Asegura la máquina: `fly machine start -a bgg-profile`
+2. Lista y borra vía admin (`GET` / `DELETE /api/profile/admin/sessions/:id` con header `x-profile-admin-password`), o la UI `/profile/admin`.
+3. Fallback:
+
+```bash
+fly ssh console -a bgg-profile -C "rm -rf /data/sessions/*"
+fly apps restart bgg-profile
+```
+
+4. Re-lista vacío y prueba un login nuevo.
+
+### Actualizar código (ambas apps)
+
+```bash
+fly deploy -a bgg-core
+fly deploy -c fly.profile.toml -a bgg-profile
+npm run fly:status
+```
+
+## Monitoreo de consumo
+
+- **Tiempo real:** [fly-metrics.net](https://fly-metrics.net) (Grafana) y el dashboard de cada app en Fly.io.
+- **On-demand en el PC:** `npm run fly:status` (estado de máquinas de `bgg-core` y `bgg-profile`).

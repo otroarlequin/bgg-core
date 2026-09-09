@@ -8,3 +8,14 @@ export {
   mapThingItemToGame,
   subtractDays,
 } from "./mappers.js";
+export {
+  createMarketFetchFn,
+  fetchMarketplaceForIds,
+  listingKeyFromUrl,
+  mapMarketplaceListing,
+  mapThingMarketplace,
+  parseMarketplaceThingPayload,
+  type MarketFetchFn,
+  type MarketListing,
+  type MarketThingResult,
+} from "./marketplace.js";

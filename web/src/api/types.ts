@@ -529,6 +529,54 @@ export interface WishlistStoreMatchResult {
   errors: Array<{ store: string; query: string; error: string }>;
 }
 
+export type MarketSortBy = "priceAsc" | "priceDesc" | "dateDesc" | "name";
+
+export interface MarketListing {
+  listingKey: string;
+  price: number | null;
+  currency: string | null;
+  condition: string | null;
+  listDate: string | null;
+  notes: string | null;
+  url: string;
+}
+
+export interface MarketAlert {
+  id: number;
+  bggId: number;
+  listingKey: string;
+  gameName: string;
+  price: number | null;
+  currency: string | null;
+  condition: string | null;
+  url: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface WishlistMarketGameMatch {
+  bggId: number;
+  name: string;
+  thumbnailUrl: string | null;
+  wishlistPriority: number | null;
+  listings: MarketListing[];
+}
+
+export interface WishlistMarketResult {
+  message: string;
+  scanned: number;
+  withListings: number;
+  noListing: number;
+  cacheHits: number;
+  networkCalls: number;
+  newAlerts: number;
+  alertsUnread: number;
+  alerts: MarketAlert[];
+  matches: WishlistMarketGameMatch[];
+  errors: Array<{ batch: string; error: string }>;
+  marked?: number;
+}
+
 export interface SyncApiResult {
   ok: boolean;
   message?: string;
@@ -543,11 +591,33 @@ export interface AppSettings {
   bggUsernameSource: "db" | "env" | null;
   hasCollectionData: boolean;
   hasPlaysData: boolean;
+  notifyEmail: string | null;
+  marketWatchCronEnabled: boolean;
+  resendConfigured: boolean;
 }
 
 export interface UpdateSettingsResult extends AppSettings {
   ok: boolean;
   wiped: boolean;
+}
+
+export interface MarketPriceWatch {
+  bggId: number;
+  maxPrice: number;
+  tolerancePct: number;
+  currency: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  gameName: string | null;
+  effectiveCeiling: number;
+}
+
+export interface MarketWatchWishlistOption {
+  bggId: number;
+  name: string;
+  wishlistPriority: number | null;
+  thumbnailUrl: string | null;
 }
 
 export interface SettingsReplaceRequired {
