@@ -24,6 +24,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { DatabaseSync } from "node:sqlite";
 import { loadConfig } from "../src/config/index.js";
 import {
   assertNoAppDataLoss,
@@ -32,6 +33,15 @@ import {
 } from "../src/storage/reconcile-app-tables.js";
 
 type Command = "status" | "pull" | "push";
+
+function checkpointSqlite(dbPath: string): void {
+  const db = new DatabaseSync(dbPath);
+  try {
+    db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  } finally {
+    db.close();
+  }
+}
 
 function argValue(flag: string): string | undefined {
   const idx = process.argv.indexOf(flag);
@@ -44,11 +54,19 @@ function hasFlag(flag: string): boolean {
 }
 
 function fly(args: string[]): ReturnType<typeof spawnSync> {
+  // shell:false keeps -C / paths intact on Windows (shell:true concatenates poorly).
   return spawnSync("fly", args, {
     encoding: "utf8",
-    shell: true,
+    shell: false,
     stdio: ["ignore", "pipe", "pipe"],
   });
+}
+
+/** flyctl on Windows often exits 1 with "Controlador no válido" after a successful SSH cmd. */
+function flyOk(result: ReturnType<typeof spawnSync>): boolean {
+  if (result.status === 0) return true;
+  const err = String(result.stderr || result.stdout || "");
+  return /Controlador no v|Invalid handle/i.test(err);
 }
 
 function resolveCommand(): Command {
@@ -101,25 +119,38 @@ function uploadRemote(appName: string, localPath: string): void {
     "-a",
     appName,
   ]);
-  if (putIncoming.status !== 0) {
+  if (!flyOk(putIncoming)) {
     console.error(putIncoming.stderr || putIncoming.stdout || "sftp put failed");
     process.exit(1);
   }
-  const swap = fly([
+  // Two simple remote cmds avoid nested-quote breakage on Windows spawn.
+  const rm = fly([
     "ssh",
     "console",
     "-a",
     appName,
     "-C",
-    "sh -c \"rm -f /data/bgg.db /data/bgg.db-wal /data/bgg.db-shm; mv /data/bgg-incoming.db /data/bgg.db\"",
+    "rm -f /data/bgg.db /data/bgg.db-wal /data/bgg.db-shm",
   ]);
-  if (swap.status !== 0) {
-    console.error(swap.stderr || swap.stdout || "remote swap failed");
+  if (!flyOk(rm)) {
+    console.error(rm.stderr || rm.stdout || "remote rm failed");
+    process.exit(1);
+  }
+  const mv = fly([
+    "ssh",
+    "console",
+    "-a",
+    appName,
+    "-C",
+    "mv /data/bgg-incoming.db /data/bgg.db",
+  ]);
+  if (!flyOk(mv)) {
+    console.error(mv.stderr || mv.stdout || "remote mv failed");
     process.exit(1);
   }
   console.log("Uploaded. Restarting app...");
   const restart = fly(["apps", "restart", appName]);
-  if (restart.status !== 0) {
+  if (!flyOk(restart)) {
     console.error(restart.stderr || "restart failed");
     process.exit(1);
   }
@@ -217,6 +248,7 @@ function main(): void {
   }
 
   // push
+  checkpointSqlite(localDb);
   const mergedPath = join(workDir, "bgg-merged.db");
   copyFileSync(localDb, mergedPath);
   console.log("Merging remote app tables into local copy (union)...");
@@ -243,6 +275,7 @@ function main(): void {
     return;
   }
 
+  checkpointSqlite(mergedPath);
   uploadRemote(appName, mergedPath);
   try {
     unlinkSync(mergedPath);
