@@ -5,9 +5,9 @@ import {
   fetchMarketWatches,
   patchMarketWatch,
   upsertMarketWatch,
-} from "../../api/client";
-import type { MarketPriceWatch, MarketWatchWishlistOption } from "../../api/types";
-import { CollapsiblePanel } from "../CollapsiblePanel";
+} from "../api/client";
+import type { MarketPriceWatch, MarketWatchWishlistOption } from "../api/types";
+import { CollapsiblePanel } from "./CollapsiblePanel";
 
 const CURRENCIES = ["USD", "EUR", "CAD", "GBP"];
 
