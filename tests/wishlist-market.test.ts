@@ -12,12 +12,14 @@ import {
 import {
   filterAndSortListings,
   queryWishlistMarket,
+  sortMarketMatches,
 } from "../src/query/wishlist-market.js";
 import { createDatabase, createStorageService } from "../src/storage/index.js";
 import {
   countUnreadMarketAlerts,
   insertMarketAlertIfNew,
 } from "../src/storage/repos/market-alerts.js";
+import { upsertMarketPriceWatch } from "../src/storage/repos/market-price-watches.js";
 
 const fixturesDir = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -111,6 +113,49 @@ describe("filterAndSortListings", () => {
     expect(sorted.map((l) => l.listingKey)).toEqual(["b", "c", "a"]);
   });
 
+  it("sorts games by wishlist priority (interest)", () => {
+    const matches = sortMarketMatches(
+      [
+        {
+          bggId: 2,
+          name: "Beta",
+          thumbnailUrl: null,
+          wishlistPriority: 3,
+          listings: [
+            {
+              listingKey: "b",
+              price: 10,
+              currency: "USD",
+              condition: "new",
+              listDate: null,
+              notes: null,
+              url: "https://example.com/b",
+            },
+          ],
+        },
+        {
+          bggId: 1,
+          name: "Alpha",
+          thumbnailUrl: null,
+          wishlistPriority: 1,
+          listings: [
+            {
+              listingKey: "a",
+              price: 90,
+              currency: "USD",
+              condition: "new",
+              listDate: null,
+              notes: null,
+              url: "https://example.com/a",
+            },
+          ],
+        },
+      ],
+      "priority",
+    );
+    expect(matches.map((m) => m.bggId)).toEqual([1, 2]);
+  });
+
   it("filters by condition and maxPrice", () => {
     const filtered = filterAndSortListings(sample, {
       conditions: ["new"],
@@ -123,7 +168,7 @@ describe("filterAndSortListings", () => {
 });
 
 describe("queryWishlistMarket alerts + cache", () => {
-  it("creates alerts for new listing keys and reuses cache", async () => {
+  it("caches listings and only alerts for price watches", async () => {
     const dir = mkdtempSync(join(tmpdir(), "bgg-market-"));
     const db = createDatabase(join(dir, "test.db"));
     const storage = createStorageService(db);
@@ -172,8 +217,8 @@ describe("queryWishlistMarket alerts + cache", () => {
     expect(fetchCalls).toBe(1);
     expect(first.matches).toHaveLength(1);
     expect(first.matches[0].listings[0].price).toBe(39.5);
-    expect(first.newAlerts).toBe(2);
-    expect(countUnreadMarketAlerts(db)).toBe(2);
+    expect(first.newAlerts).toBe(0);
+    expect(countUnreadMarketAlerts(db)).toBe(0);
 
     const second = await queryWishlistMarket(db, {
       maxItems: 10,
@@ -188,6 +233,20 @@ describe("queryWishlistMarket alerts + cache", () => {
     expect(second.cacheHits).toBe(1);
     expect(second.networkCalls).toBe(0);
     expect(second.newAlerts).toBe(0);
+
+    upsertMarketPriceWatch(db, {
+      bggId: 266192,
+      maxPrice: 50,
+      tolerancePct: 10,
+      currency: "USD",
+    });
+
+    const watched = await queryWishlistMarket(db, {
+      maxItems: 10,
+      cacheOnly: true,
+    });
+    expect(watched.newAlerts).toBe(2);
+    expect(countUnreadMarketAlerts(db)).toBe(2);
 
     const insertedAgain = insertMarketAlertIfNew(db, {
       bggId: 266192,

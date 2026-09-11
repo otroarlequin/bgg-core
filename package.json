@@ -27,7 +27,8 @@
     "db:pull": "tsx scripts/db-reconcile.ts pull",
     "db:push": "tsx scripts/db-reconcile.ts push",
     "db:upload": "tsx scripts/upload-db.ts",
-    "fly:status": "node scripts/fly-status.mjs"
+    "fly:status": "node scripts/fly-status.mjs",
+    "fly:cost": "node scripts/fly-cost.mjs"
   },
   "engines": {
     "node": ">=20"

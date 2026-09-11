@@ -529,7 +529,9 @@ export interface WishlistStoreMatchResult {
   errors: Array<{ store: string; query: string; error: string }>;
 }
 
-export type MarketSortBy = "priceAsc" | "priceDesc" | "dateDesc" | "name";
+export type MarketSortBy = "priceAsc" | "priceDesc" | "dateDesc" | "name" | "priority";
+export type ListingSortBy = "priceAsc" | "priceDesc" | "dateDesc";
+export type GameSortBy = "priority" | "priceAsc" | "priceDesc" | "name";
 
 export interface MarketListing {
   listingKey: string;
@@ -610,6 +612,9 @@ export interface MarketPriceWatch {
   createdAt: string;
   updatedAt: string;
   gameName: string | null;
+  thumbnailUrl?: string | null;
+  yearPublished?: number | null;
+  wishlistPriority?: number | null;
   effectiveCeiling: number;
 }
 
@@ -618,6 +623,10 @@ export interface MarketWatchWishlistOption {
   name: string;
   wishlistPriority: number | null;
   thumbnailUrl: string | null;
+  yearPublished?: number | null;
+  minPlayers?: number | null;
+  maxPlayers?: number | null;
+  gameWeight?: number | null;
 }
 
 export interface SettingsReplaceRequired {
@@ -627,5 +636,101 @@ export interface SettingsReplaceRequired {
   nextUsername: string;
   hasCollectionData: boolean;
   hasPlaysData: boolean;
+}
+
+export interface InsightsGameRef {
+  bggId: number;
+  name: string;
+  thumbnailUrl: string | null;
+}
+
+export interface InsightsYearBucket {
+  year: number;
+  plays: number;
+  uniqueGames: number;
+  hours: number;
+  debuts: number;
+}
+
+export interface InsightsDebut extends InsightsGameRef {
+  firstPlay: string;
+  playCount: number;
+}
+
+export interface InsightsCollectionTransition extends InsightsGameRef {
+  ownedAt: string;
+  wishlistAt: string | null;
+  daysWishlistToOwned: number | null;
+  firstPlay: string | null;
+  daysOwnedToFirstPlay: number | null;
+}
+
+export interface InsightsCompanion {
+  key: string;
+  displayName: string;
+  username: string;
+  playsTogether: number;
+  uniqueGames: number;
+  wins: number;
+  winRate: number | null;
+  avgWeight: number | null;
+}
+
+export interface InsightsPlayerCountBucket {
+  id: "1" | "2" | "3" | "4" | "5" | "6+";
+  plays: number;
+}
+
+export interface InsightsWeightBucket {
+  id: "light" | "medium" | "heavy";
+  label: string;
+  plays: number;
+}
+
+export interface InsightsCuriosity {
+  mostPlayed: (InsightsGameRef & { plays: number }) | null;
+  soloPlays: number;
+  multiPlays: number;
+  topMechanic: { name: string; plays: number } | null;
+  topCategory: { name: string; plays: number } | null;
+  currentStreak: number;
+}
+
+export interface InsightsTop100Item {
+  rank: number;
+  bggId: number;
+  name: string;
+  thumbnailUrl: string | null;
+  owned: boolean;
+}
+
+export interface InsightsResult {
+  years: number[];
+  selectedYear: number | null;
+  yearly: InsightsYearBucket[];
+  selected: {
+    plays: number;
+    uniqueGames: number;
+    hours: number;
+    hIndex: number;
+    debuts: InsightsDebut[];
+    unplayedOwned: { count: number; sample: InsightsGameRef[] };
+    ownedThisPeriod: InsightsCollectionTransition[];
+    trackingSince: string | null;
+  };
+  players: {
+    companions: InsightsCompanion[];
+    playerCounts: InsightsPlayerCountBucket[];
+    avgWeight: number | null;
+    weightBuckets: InsightsWeightBucket[];
+  };
+  curiosities: InsightsCuriosity;
+  top100: {
+    owned: number;
+    items: InsightsTop100Item[];
+    fetchedAt: string | null;
+    error: string | null;
+  };
+  isProfile: boolean;
 }
 

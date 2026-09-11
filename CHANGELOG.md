@@ -7,6 +7,21 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- Actividad **Insights**: año a año (adquisiciones vs bajas), top 100 BGG frente a la mesa, distribución de jugadores/peso; `GET /api/activities/insights` + UI.
+- Historial de estado de colección (`collection_status_events`) con baseline y diffs en sync.
+- Caché de ranks del browse BGG (top 100) para Insights.
+- Script `npm run fly:cost` para estimar coste de máquinas Fly.
+
+### Changed
+- **Wishlist × BGG Market:** caché al entrar (`action: "status"`), botón «Actualizar Market» aparte de filtros; notificaciones solo por alertas de precio (watches), no por cada listing; cards con «Alerta +/✎» y scroll a ofertas desde campana/watches.
+- Hub **Actividades:** agrupado (Mesa / Wishlist / Descubrir / Analizar) y tiles/iconos más legibles.
+- **Resumen:** paneles densos de métricas en lugar de StatCards enormes.
+- **Qué jugar esta noche:** filtros se colapsan tras sugerir; botones de acción siempre visibles.
+- **Shelf of shame:** filtros clásicos, grid de portadas; copy claro de que «En colección desde» es `last_modified` de BGG, no fecha de compra.
+- **Validador de compras:** layout 50/50 ficha/atributos, descripción con tope de altura y scroll; filtros de overlap dentro del bloque Overlap.
+- Pestaña **Comandos** oculta en deploys Fly (`*.fly.dev` / `*.fly.io`) y en modo Profile.
+
 ## [0.3.0] — 2026-09-09
 
 Hito **Profile compartido**: la variante multi-visitante se publica como la versión compartida con más personas (`bgg-profile`), junto con el core personal. Incluye admin de sesiones, market watches y documentación de arquitectura/actividades.

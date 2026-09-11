@@ -178,5 +178,7 @@ npm run fly:status
 
 ## Monitoreo de consumo
 
-- **Tiempo real:** [fly-metrics.net](https://fly-metrics.net) (Grafana) y el dashboard de cada app en Fly.io.
-- **On-demand en el PC:** `npm run fly:status` (estado de máquinas de `bgg-core` y `bgg-profile`).
+- **Factura en $:** [Billing / Cost Explorer](https://fly.io/dashboard/personal/billing) (fuente de verdad; umbral personal ~$5).
+- **On-demand en el PC:** `npm run fly:cost` (estimación + umbral); `npm run fly:cost -- --open` abre Billing.
+- **Máquinas:** `npm run fly:status`.
+- **Técnico (no $):** [fly-metrics.net](https://fly-metrics.net).

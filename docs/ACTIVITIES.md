@@ -18,6 +18,19 @@ Documentos relacionados: [ARCHITECTURE.md](./ARCHITECTURE.md), [COMMANDS.md](./C
 
 ---
 
+## Insights
+
+| | |
+|--|--|
+| **ID** | `insights` |
+| **Objetivo** | Ver cómo juegas (año, compañeros, peso) y cuánto del top 100 BGG tienes. |
+| **Cómo** | Series y debuts desde el log de partidas; mosaico 10×10 del browse BGG (caché ~36 h); compañeros / N jugadores / peso. El historial wishlist→owned **no existe** en BGG: a partir del primer sync post-deploy se guardan `collection_status_events`. |
+| **Deps** | Colección + partidas; red a BGG solo para el mosaico. |
+| **Personal** | Histórico completo de plays. |
+| **Profile** | Disponible; el log de plays suele ser ~1 año. |
+
+---
+
 ## Validador de compras
 
 | | |
@@ -86,7 +99,7 @@ Documentos relacionados: [ARCHITECTURE.md](./ARCHITECTURE.md), [COMMANDS.md](./C
 |--|--|
 | **ID** | `wishlist-market` |
 | **Objetivo** | Ver ofertas de GeekMarket para ítems de wishlist y detectar novedades al escanear. |
-| **Cómo** | Consulta marketplace BGG; filtra condición/orden; alerta in-app de novedades; se combina con **price watches** (umbrales + cron). |
+| **Cómo** | Consulta marketplace BGG (toda la wishlist, caché ~12h); filtra condición; ordena por interés/precio; alertas de umbral por juego. |
 | **Deps** | `BGG_TOKEN`; en Personal, cron opcional (`CRON_SECRET`, Resend). |
 | **Personal** | Sí + watches/cron/email. |
 | **Profile** | Escaneo de sesión; sin cron durable del visitante. |

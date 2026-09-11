@@ -69,6 +69,19 @@ export function wipeBggUserData(db: Db): void {
   runTransaction(db, () => {
     db.exec("DELETE FROM play_players");
     db.exec("DELETE FROM plays");
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS collection_status_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        bgg_id INTEGER NOT NULL,
+        observed_at TEXT NOT NULL,
+        own INTEGER NOT NULL,
+        wishlist INTEGER NOT NULL,
+        preordered INTEGER NOT NULL,
+        want_to_play INTEGER NOT NULL,
+        source TEXT NOT NULL
+      );
+    `);
+    db.exec("DELETE FROM collection_status_events");
     db.exec("DELETE FROM collection_entries");
     db.prepare(
       `DELETE FROM sync_state WHERE resource IN ('collection', 'plays', 'things')`,

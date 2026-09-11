@@ -13,15 +13,26 @@ import { GameCard } from "../../components/GameCard";
 const PLAYERS_MAX_CAP = 30;
 
 function filtersSummary(opts: {
+  players: number;
+  maxTime: number;
+  maxWeight: string;
+  ownedOnly: boolean;
+  includeExpansions: boolean;
   categories: string[];
   mechanics: string[];
   languageDependence?: string;
 }): string {
-  const bits: string[] = [];
+  const bits: string[] = [
+    `${opts.players} jug.`,
+    `≤${opts.maxTime} min`,
+  ];
+  if (opts.maxWeight.trim()) bits.push(`peso ≤${opts.maxWeight}`);
+  if (opts.ownedOnly) bits.push("owned");
+  if (opts.includeExpansions) bits.push("expansiones");
   if (opts.languageDependence) bits.push("idioma");
   if (opts.categories.length) bits.push(`${opts.categories.length} cat.`);
   if (opts.mechanics.length) bits.push(`${opts.mechanics.length} mec.`);
-  return bits.length > 0 ? bits.join(" · ") : "Sin filtros de taxonomía";
+  return bits.join(" · ");
 }
 
 export function WhatToPlayActivity() {
@@ -40,6 +51,7 @@ export function WhatToPlayActivity() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   const { data: facets } = useQuery({
     queryKey: ["what-to-play-facets", ownedOnly, includeExpansions],
@@ -99,6 +111,7 @@ export function WhatToPlayActivity() {
       setSuggestions(result.suggestions);
       setPoolTotal(result.poolTotal);
       setSearched(true);
+      setFiltersOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al sugerir");
     } finally {
@@ -106,16 +119,36 @@ export function WhatToPlayActivity() {
     }
   }
 
+  const summary = filtersSummary({
+    players,
+    maxTime,
+    maxWeight,
+    ownedOnly,
+    includeExpansions,
+    categories,
+    mechanics,
+    languageDependence,
+  });
+
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
+      <div>
         <h2 className="text-lg font-semibold text-ink">Qué jugar esta noche</h2>
         <p className="mt-1 text-sm text-muted">
           Filtra por mesa, tiempo y taxonomía; te proponemos 3–5 opciones con un
           score simple.
         </p>
+      </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <CollapsiblePanel
+        title="Filtros"
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        defaultOpen
+        summary={summary}
+        className="rounded-xl border border-border bg-surface-raised/60"
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm">
             <span className="mb-1 block text-muted">
               Jugadores ({playersMin}–{playersMax})
@@ -191,11 +224,15 @@ export function WhatToPlayActivity() {
           <CollapsiblePanel
             title="Categorías, mecánicas e idioma"
             defaultOpen={false}
-            summary={filtersSummary({
-              categories,
-              mechanics,
-              languageDependence,
-            })}
+            summary={
+              [
+                languageDependence ? "idioma" : null,
+                categories.length ? `${categories.length} cat.` : null,
+                mechanics.length ? `${mechanics.length} mec.` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "Sin filtros de taxonomía"
+            }
           >
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -224,27 +261,30 @@ export function WhatToPlayActivity() {
             </div>
           </CollapsiblePanel>
         </div>
+      </CollapsiblePanel>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void loadSuggestions(false)}
+          className="min-h-11 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-surface hover:bg-accent-hover disabled:opacity-50 md:min-h-0 md:py-2"
+        >
+          {loading ? "Buscando…" : "Sugerir"}
+        </button>
+        {searched ? (
           <button
             type="button"
             disabled={loading}
-            onClick={() => void loadSuggestions(false)}
-            className="min-h-11 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-surface hover:bg-accent-hover disabled:opacity-50 md:min-h-0 md:py-2"
+            onClick={() => void loadSuggestions(true)}
+            className="min-h-11 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink hover:bg-surface-card disabled:opacity-50 md:min-h-0 md:py-2"
           >
-            {loading ? "Buscando…" : "Sugerir"}
+            Otras sugerencias
           </button>
-          {searched ? (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => void loadSuggestions(true)}
-              className="min-h-11 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink hover:bg-surface-card disabled:opacity-50 md:min-h-0 md:py-2"
-            >
-              Otras sugerencias
-            </button>
-          ) : null}
-        </div>
+        ) : null}
+        {searched && !filtersOpen ? (
+          <span className="text-xs text-muted">{summary}</span>
+        ) : null}
       </div>
 
       {error ? (

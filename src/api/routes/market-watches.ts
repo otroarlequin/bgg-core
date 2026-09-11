@@ -9,22 +9,35 @@ import {
 import {
   effectivePriceCeiling,
   listWishlistForPriceWatches,
+  resolveGameDisplayName,
 } from "../../query/market-price-watch.js";
 import { getDb } from "../context.js";
 
 export const marketWatchesRoutes = new Hono();
 
-function gameNameFor(db: ReturnType<typeof getDb>, bggId: number): string | null {
-  const row = db
-    .prepare(`SELECT name FROM collection_entries WHERE bgg_id = ? LIMIT 1`)
-    .get(bggId) as { name: string } | undefined;
-  return row?.name ?? null;
-}
-
 function enrichWatch(db: ReturnType<typeof getDb>, watch: NonNullable<ReturnType<typeof getMarketPriceWatch>>) {
+  const meta = db
+    .prepare(
+      `SELECT ce.thumbnail_url AS thumbnailUrl,
+              ce.year_published AS yearPublished,
+              ce.wishlist_priority AS wishlistPriority
+       FROM collection_entries ce
+       WHERE ce.bgg_id = ?
+       LIMIT 1`,
+    )
+    .get(watch.bggId) as
+    | {
+        thumbnailUrl: string | null;
+        yearPublished: number | null;
+        wishlistPriority: number | null;
+      }
+    | undefined;
   return {
     ...watch,
-    gameName: gameNameFor(db, watch.bggId),
+    gameName: resolveGameDisplayName(db, watch.bggId),
+    thumbnailUrl: meta?.thumbnailUrl ?? null,
+    yearPublished: meta?.yearPublished ?? null,
+    wishlistPriority: meta?.wishlistPriority ?? null,
     effectiveCeiling: effectivePriceCeiling(watch.maxPrice, watch.tolerancePct),
   };
 }
@@ -39,9 +52,13 @@ marketWatchesRoutes.get("/wishlist-options", (c) => {
   const db = getDb();
   const wishlist = listWishlistForPriceWatches(db).map((item) => ({
     bggId: item.bggId,
-    name: item.name,
+    name: resolveGameDisplayName(db, item.bggId, item.name),
     wishlistPriority: item.wishlistPriority,
     thumbnailUrl: item.thumbnailUrl,
+    yearPublished: item.yearPublished,
+    minPlayers: item.minPlayers,
+    maxPlayers: item.maxPlayers,
+    gameWeight: item.gameWeight,
   }));
   return c.json({ wishlist });
 });

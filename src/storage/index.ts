@@ -1,6 +1,8 @@
 import type { Db } from "./database.js";
 import * as appSettingsRepo from "./repos/app-settings.js";
 import * as collectionRepo from "./repos/collection.js";
+import * as collectionStatusEventsRepo from "./repos/collection-status-events.js";
+import * as bggTopRanksCacheRepo from "./repos/bgg-top-ranks-cache.js";
 import * as duelRepo from "./repos/duel.js";
 import * as gamesRepo from "./repos/games.js";
 import * as marketAlertsRepo from "./repos/market-alerts.js";
@@ -14,6 +16,8 @@ export interface StorageService {
   db: Db;
   games: typeof gamesRepo;
   collection: typeof collectionRepo;
+  collectionStatusEvents: typeof collectionStatusEventsRepo;
+  bggTopRanksCache: typeof bggTopRanksCacheRepo;
   plays: typeof playsRepo;
   syncState: typeof syncStateRepo;
   duel: typeof duelRepo;
@@ -29,6 +33,8 @@ export function createStorageService(db: Db): StorageService {
     db,
     games: gamesRepo,
     collection: collectionRepo,
+    collectionStatusEvents: collectionStatusEventsRepo,
+    bggTopRanksCache: bggTopRanksCacheRepo,
     plays: playsRepo,
     syncState: syncStateRepo,
     duel: duelRepo,

@@ -132,8 +132,12 @@ npm run build:all
 
 | Opción | Cómo |
 |--------|------|
-| Tiempo real | Dashboard Fly + [fly-metrics.net](https://fly-metrics.net) (Grafana gestionado) |
-| On-demand | `npm run fly:status` (máquinas `bgg-core` + `bgg-profile`) |
+| Factura real ($) | [Cost Explorer / Billing](https://fly.io/dashboard/personal/billing) — fuente de verdad |
+| On-demand $ | `npm run fly:cost` (estimación pricing + umbral $5); `npm run fly:cost -- --open` abre Billing |
+| On-demand máquinas | `npm run fly:status` |
+| Tiempo real técnico | [fly-metrics.net](https://fly-metrics.net) (CPU/RAM/HTTP; **no** es la factura) |
+
+`fly:cost` **no** lee la API de facturación (Fly no la publica): estima desde tus máquinas/volúmenes con [pricing público](https://fly.io/docs/about/pricing/) y te recuerda el umbral de $5 de la org personal.
 
 ## Alertas BGG Market (v2 — cron + email)
 

@@ -21,6 +21,7 @@ import type {
   HotnessScoutResult,
   WishlistStoreMatchResult,
   WishlistMarketResult,
+  InsightsResult,
   MarketSortBy,
   MarketPriceWatch,
   MarketWatchWishlistOption,
@@ -199,6 +200,11 @@ export function postGameCompare(body: {
 export function fetchShelfOfShame(params: {
   includeExpansions?: boolean;
   limit?: number;
+  players?: number;
+  maxWeight?: number;
+  categories?: string[];
+  mechanics?: string[];
+  languageDependence?: string;
 } = {}): Promise<{ total: number; items: ShelfOfShameItem[] }> {
   return fetchJson(`/api/activities/shelf-of-shame${toQuery(params)}`);
 }
@@ -252,6 +258,10 @@ export function fetchHotnessScout(params: {
   includeExpansions?: boolean;
 } = {}): Promise<HotnessScoutResult> {
   return fetchJson(`/api/activities/hotness-scout${toQuery(params)}`);
+}
+
+export function fetchInsights(params: { year?: number } = {}): Promise<InsightsResult> {
+  return fetchJson(`/api/activities/insights${toQuery(params)}`);
 }
 
 export function postWishlistStoreMatch(body: {

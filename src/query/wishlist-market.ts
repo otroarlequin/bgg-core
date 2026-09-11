@@ -2,7 +2,6 @@ import type { MarketFetchFn, MarketListing } from "../bgg/marketplace.js";
 import type { Db } from "../storage/database.js";
 import {
   countUnreadMarketAlerts,
-  insertMarketAlertIfNew,
   listUnreadMarketAlerts,
   markMarketAlertsRead,
   type MarketAlert,
@@ -12,8 +11,14 @@ import {
   setMarketListingsCache,
 } from "../storage/repos/market-listings-cache.js";
 import { queryCollection } from "./collection.js";
+import { recordWatchHitsFromListings } from "./market-price-watch.js";
 
-export type MarketSortBy = "priceAsc" | "priceDesc" | "dateDesc" | "name";
+export type MarketSortBy = "priceAsc" | "priceDesc" | "dateDesc" | "name" | "priority";
+export type ListingSortBy = "priceAsc" | "priceDesc" | "dateDesc";
+export type GameSortBy = "priority" | "priceAsc" | "priceDesc" | "name";
+
+/** Safety cap only — a ~250-item wishlist is fine (cached after first scan). */
+export const WISHLIST_MARKET_MAX_ITEMS = 500;
 
 export interface WishlistMarketParams {
   forceRefresh?: boolean;
@@ -106,13 +111,46 @@ export function filterAndSortListings(
   return out;
 }
 
+export function sortMarketMatches(
+  matches: WishlistMarketGameMatch[],
+  sortBy: MarketSortBy,
+): WishlistMarketGameMatch[] {
+  matches.sort((a, b) => {
+    if (sortBy === "priority") {
+      const ap = a.wishlistPriority ?? 99;
+      const bp = b.wishlistPriority ?? 99;
+      if (ap !== bp) return ap - bp;
+      return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+    }
+    if (sortBy === "name") {
+      return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+    }
+    if (sortBy === "dateDesc") {
+      const ad = a.listings[0]?.listDate ?? "";
+      const bd = b.listings[0]?.listDate ?? "";
+      if (ad !== bd) return bd.localeCompare(ad);
+      return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+    }
+    const ap = a.listings[0]?.price;
+    const bp = b.listings[0]?.price;
+    if (ap == null && bp == null) return a.name.localeCompare(b.name);
+    if (ap == null) return 1;
+    if (bp == null) return -1;
+    return sortBy === "priceDesc" ? bp - ap : ap - bp;
+  });
+  return matches;
+}
+
 export async function queryWishlistMarket(
   db: Db,
   params: WishlistMarketParams = {},
 ): Promise<WishlistMarketResult> {
   const forceRefresh = params.forceRefresh === true;
   const cacheOnly = params.cacheOnly === true;
-  const maxItems = Math.min(100, Math.max(1, params.maxItems ?? 40));
+  const maxItems = Math.min(
+    WISHLIST_MARKET_MAX_ITEMS,
+    Math.max(1, params.maxItems ?? WISHLIST_MARKET_MAX_ITEMS),
+  );
   const ttlHours = params.cacheTtlHours ?? 12;
   const fetchMarket = params.fetchMarket;
 
@@ -147,6 +185,7 @@ export async function queryWishlistMarket(
 
   const missingIds: number[] = [];
   const listingsById = new Map<number, MarketListing[]>();
+  const namesById = new Map<number, string>();
 
   for (const item of wishlist) {
     if (!forceRefresh || cacheOnly) {
@@ -171,19 +210,8 @@ export async function queryWishlistMarket(
       for (const result of results) {
         seen.add(result.bggId);
         listingsById.set(result.bggId, result.listings);
+        namesById.set(result.bggId, result.name);
         setMarketListingsCache(db, result.bggId, result.listings, ttlHours);
-        for (const listing of result.listings) {
-          const inserted = insertMarketAlertIfNew(db, {
-            bggId: result.bggId,
-            listingKey: listing.listingKey,
-            gameName: result.name || wishlist.find((w) => w.bggId === result.bggId)?.name || String(result.bggId),
-            price: listing.price,
-            currency: listing.currency,
-            condition: listing.condition,
-            url: listing.url,
-          });
-          if (inserted) newAlerts += 1;
-        }
       }
       for (const id of missingIds) {
         if (!seen.has(id)) {
@@ -215,22 +243,10 @@ export async function queryWishlistMarket(
     });
   }
 
-  // Sort games by cheapest listing under current sort (priceAsc default)
-  const sortBy = params.sortBy ?? "priceAsc";
-  if (sortBy === "priceAsc" || sortBy === "priceDesc") {
-    matches.sort((a, b) => {
-      const ap = a.listings[0]?.price;
-      const bp = b.listings[0]?.price;
-      if (ap == null && bp == null) return a.name.localeCompare(b.name);
-      if (ap == null) return 1;
-      if (bp == null) return -1;
-      return sortBy === "priceDesc" ? bp - ap : ap - bp;
-    });
-  } else if (sortBy === "name") {
-    matches.sort((a, b) =>
-      a.name.localeCompare(b.name, "es", { sensitivity: "base" }),
-    );
-  }
+  sortMarketMatches(matches, params.sortBy ?? "priceAsc");
+
+  const watchHits = recordWatchHitsFromListings(db, listingsById, namesById);
+  newAlerts = watchHits.newAlerts;
 
   const alerts = listUnreadMarketAlerts(db);
   const alertsUnread = countUnreadMarketAlerts(db);
@@ -238,8 +254,12 @@ export async function queryWishlistMarket(
 
   const message =
     withListings > 0
-      ? `Market: ${withListings} juegos con ofertas (${alertsUnread} novedades sin revisar).`
-      : `Sin ofertas en Market para ${wishlist.length} juegos escaneados.`;
+      ? `Market: ${withListings} juegos con ofertas${
+          alertsUnread > 0
+            ? ` (${alertsUnread} alerta${alertsUnread === 1 ? "" : "s"} de precio)`
+            : ""
+        }.`
+      : `Sin ofertas en Market para ${wishlist.length} juegos.`;
 
   return {
     message,

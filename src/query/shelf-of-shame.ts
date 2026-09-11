@@ -5,6 +5,11 @@ import { decodeHtmlEntities } from "../utils/html-entities.js";
 export interface ShelfOfShameParams {
   includeExpansions?: boolean;
   limit?: number;
+  players?: number;
+  maxWeight?: number;
+  categories?: string[];
+  mechanics?: string[];
+  languageDependence?: string;
 }
 
 export interface ShelfOfShameItem {
@@ -23,6 +28,9 @@ export interface ShelfOfShameItem {
 /**
  * Owned games with zero plays (collection count and no local play rows).
  * Oldest first by last_modified, then year, then name.
+ *
+ * Note: last_modified is BGG collection status.lastmodified (any checkbox/rating
+ * edit), not acquisition date.
  */
 export function queryShelfOfShame(
   db: Db,
@@ -37,6 +45,42 @@ export function queryShelfOfShame(
 
   if (params.includeExpansions !== true) {
     conditions.push("ce.subtype != 'boardgameexpansion'");
+  }
+
+  if (params.players !== undefined) {
+    conditions.push("(g.min_players IS NULL OR g.min_players <= ?)");
+    conditions.push("(g.max_players IS NULL OR g.max_players >= ?)");
+    values.push(params.players, params.players);
+  }
+
+  if (params.maxWeight !== undefined) {
+    conditions.push("g.weight IS NOT NULL AND g.weight <= ?");
+    values.push(params.maxWeight);
+  }
+
+  if (params.languageDependence?.trim()) {
+    conditions.push("g.language_dependence = ?");
+    values.push(params.languageDependence.trim());
+  }
+
+  if (params.categories?.length) {
+    for (const cat of params.categories) {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM json_each(COALESCE(g.categories, '[]')) je
+        WHERE je.value = ? COLLATE NOCASE
+      )`);
+      values.push(cat.trim());
+    }
+  }
+
+  if (params.mechanics?.length) {
+    for (const mech of params.mechanics) {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM json_each(COALESCE(g.mechanics, '[]')) je
+        WHERE je.value = ? COLLATE NOCASE
+      )`);
+      values.push(mech.trim());
+    }
   }
 
   const limitClause = params.limit ? "LIMIT ?" : "";

@@ -323,8 +323,8 @@ function CandidatePanel({
 
   return (
     <div className="rounded-2xl border border-border bg-surface-raised/80 p-4">
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-stretch">
-        <div className="flex min-h-0 min-w-0 flex-col gap-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-start">
+        <div className="flex min-w-0 flex-col gap-3">
           <div className="flex gap-3">
             <div className="relative shrink-0">
               <img
@@ -378,7 +378,7 @@ function CandidatePanel({
             </div>
           </div>
           {candidate.description ? (
-            <div className="min-h-[14rem] flex-1 overflow-y-auto rounded-lg border border-border/60 bg-surface/40 p-3 lg:min-h-0">
+            <div className="max-h-80 w-full overflow-y-auto rounded-lg border border-border/60 bg-surface/40 p-3">
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">
                 {candidate.description}
               </p>
@@ -388,7 +388,7 @@ function CandidatePanel({
           )}
         </div>
 
-        <div className="min-w-0 space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+        <div className="min-w-0 space-y-3 border-t border-border pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
           <div
             title="Haz click en un diseñador, mecánica u otro atributo para ver coincidencias en tu colección. Pasa el cursor sobre cada chip para ver qué se buscará. Vuelve a hacer click en el chip activo para deseleccionarlo."
           >
@@ -845,58 +845,52 @@ export function PurchaseValidatorActivity({
             </div>
           ) : null}
 
-          <div className="rounded-xl border border-border bg-surface-raised/40 p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-dim">
-              Filtros del overlap
-            </h3>
-            <p className="mt-1 text-xs text-muted">
-              Filtran el % y la lista de juegos más similares (y las
-              coincidencias por atributo).
-            </p>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-ink-soft">
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={filterOwn}
-                  onChange={(e) => setFilterOwn(e.target.checked)}
-                />
-                Solo owned
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={filterWishlist}
-                  onChange={(e) => setFilterWishlist(e.target.checked)}
-                />
-                Wishlist
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={filterPreordered}
-                  onChange={(e) => setFilterPreordered(e.target.checked)}
-                />
-                Preordered
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={includeExpansions}
-                  onChange={(e) => setIncludeExpansions(e.target.checked)}
-                />
-                Incluir expansiones
-              </label>
-            </div>
-          </div>
-
           <div className="rounded-xl border border-border bg-surface-raised/60 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-dim">
-              Overlap con tu ludoteca
-            </h3>
-            <p className="mt-2 text-3xl font-bold text-accent">
-              {overlapView.top10MeanPercent}%
-            </p>
-            <p className="mt-1 text-sm text-muted">{analysis.overlap.hint}</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-dim">
+                  Overlap con tu ludoteca
+                </h3>
+                <p className="mt-2 text-3xl font-bold text-accent">
+                  {overlapView.top10MeanPercent}%
+                </p>
+                <p className="mt-1 text-sm text-muted">{analysis.overlap.hint}</p>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-ink-soft">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={filterOwn}
+                    onChange={(e) => setFilterOwn(e.target.checked)}
+                  />
+                  Solo owned
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={filterWishlist}
+                    onChange={(e) => setFilterWishlist(e.target.checked)}
+                  />
+                  Wishlist
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={filterPreordered}
+                    onChange={(e) => setFilterPreordered(e.target.checked)}
+                  />
+                  Preordered
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={includeExpansions}
+                    onChange={(e) => setIncludeExpansions(e.target.checked)}
+                  />
+                  Incluir expansiones
+                </label>
+              </div>
+            </div>
             {overlapView.filteredTotal === 0 ? (
               <p className="mt-4 rounded-xl border border-border bg-surface-raised/40 p-4 text-sm text-muted-dim">
                 Ningún juego de la lista cumple estos filtros.

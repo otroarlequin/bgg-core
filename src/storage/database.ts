@@ -104,6 +104,30 @@ function runMigrations(db: DatabaseSync): void {
       PRIMARY KEY (bgg_id, listing_key)
     );
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS collection_status_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bgg_id INTEGER NOT NULL,
+      observed_at TEXT NOT NULL,
+      own INTEGER NOT NULL,
+      wishlist INTEGER NOT NULL,
+      preordered INTEGER NOT NULL,
+      want_to_play INTEGER NOT NULL,
+      source TEXT NOT NULL
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_collection_status_events_bgg
+      ON collection_status_events(bgg_id, observed_at, id);
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bgg_top_ranks_cache (
+      cache_key TEXT PRIMARY KEY NOT NULL,
+      payload_json TEXT NOT NULL,
+      fetched_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    );
+  `);
 }
 
 function ensureColumn(

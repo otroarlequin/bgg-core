@@ -24,6 +24,15 @@ type TabId =
   | "commands"
   | "settings";
 
+/** Hide ops Commands on Fly deploys and Profile. */
+function showCommandsTab(mode: AppMode): boolean {
+  if (mode === "profile") return false;
+  if (typeof window === "undefined") return true;
+  const host = window.location.hostname;
+  if (host.endsWith(".fly.dev") || host.endsWith(".fly.io")) return false;
+  return true;
+}
+
 function GearIcon() {
   return (
     <svg
@@ -50,14 +59,15 @@ function GearIcon() {
 
 export default function App({ mode = "personal" }: { mode?: AppMode }) {
   const isProfile = mode === "profile";
+  const commandsVisible = showCommandsTab(mode);
   const tabs: Array<{ id: Exclude<TabId, "settings">; label: string }> = [
     { id: "summary", label: "Resumen" },
     { id: "collection", label: "Colección" },
     { id: "plays", label: "Partidas" },
     { id: "activities", label: "Actividades" },
-    ...(isProfile
-      ? []
-      : [{ id: "commands" as const, label: "Comandos" }]),
+    ...(commandsVisible
+      ? [{ id: "commands" as const, label: "Comandos" }]
+      : []),
   ];
 
   const [activeTab, setActiveTab] = useState<TabId>("summary");
@@ -140,7 +150,7 @@ export default function App({ mode = "personal" }: { mode?: AppMode }) {
             onConsumedInitialFocus={() => setActivitiesFocus(null)}
           />
         ) : null}
-        {activeTab === "commands" && !isProfile ? <CommandsPage /> : null}
+        {activeTab === "commands" && commandsVisible ? <CommandsPage /> : null}
         {activeTab === "settings" ? <SettingsPage mode={mode} /> : null}
       </main>
     </div>

@@ -6,6 +6,10 @@ import {
 import type { BggCollectionItem } from "bgg-api-ts";
 import type { CollectionEntry } from "../domain/types.js";
 import type { StorageService } from "../storage/index.js";
+import {
+  listAggregatedCollectionFlags,
+  recordCollectionStatusEvents,
+} from "../storage/repos/collection-status-events.js";
 
 export interface SyncCollectionResult {
   count: number;
@@ -58,7 +62,9 @@ export async function syncCollection(
   const expansions = await fetchCollectionPart(client, username, expansionParams);
 
   const entries = [...baseGames, ...expansions];
+  const previousFlags = listAggregatedCollectionFlags(storage.db);
   const count = storage.collection.upsertCollectionEntries(storage.db, entries);
+  recordCollectionStatusEvents(storage.db, previousFlags);
 
   storage.syncState.setSyncState(
     storage.db,

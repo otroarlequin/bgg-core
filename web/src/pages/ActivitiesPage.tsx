@@ -9,10 +9,12 @@ import { HotnessScoutActivity } from "./activities/HotnessScoutActivity";
 import { GameCompareActivity } from "./activities/GameCompareActivity";
 import { WishlistStoreMatchActivity } from "./activities/WishlistStoreMatchActivity";
 import { WishlistMarketActivity } from "./activities/WishlistMarketActivity";
+import { InsightsActivity } from "./activities/InsightsActivity";
 import { postWishlistMarket } from "../api/client";
 
 type ActivityId =
   | "hub"
+  | "insights"
   | "pairwise-duel"
   | "purchase-validator"
   | "game-compare"
@@ -26,85 +28,103 @@ type ActivityId =
 
 export type ActivitiesFocus = Exclude<ActivityId, "hub">;
 
-const activities: Array<{
+type ActivityTile = {
   id: Exclude<ActivityId, "hub">;
   title: string;
   description: string;
   Icon: () => ReactNode;
-}> = [
+};
+
+const activityGroups: Array<{ title: string; items: ActivityTile[] }> = [
   {
-    id: "purchase-validator",
-    title: "Validador de compras",
-    description:
-      "Analiza un juego de BGG frente a tu colección (owned, wishlist, preordered) para decidir si te interesa.",
-    Icon: CartIcon,
+    title: "Mesa",
+    items: [
+      {
+        id: "what-to-play",
+        title: "Qué jugar esta noche",
+        description: "3–5 sugerencias según jugadores, tiempo y peso.",
+        Icon: DiceIcon,
+      },
+      {
+        id: "shelf-of-shame",
+        title: "Shelf of shame",
+        description: "Owned sin partidas, los más antiguos primero.",
+        Icon: ShameIcon,
+      },
+      {
+        id: "play-calendar",
+        title: "Calendario / rachas",
+        description: "Heatmap del último año, racha actual y mejor racha.",
+        Icon: CalendarIcon,
+      },
+    ],
   },
   {
-    id: "game-compare",
-    title: "Comparador de juegos",
-    description:
-      "Compara hasta 4 títulos de BGG lado a lado: ficha técnica, similitud y diferencias.",
-    Icon: CompareIcon,
+    title: "Wishlist",
+    items: [
+      {
+        id: "smart-wishlist",
+        title: "Wishlist inteligente",
+        description: "Prioriza según cómo juegas y los huecos de tu mesa.",
+        Icon: WishlistIcon,
+      },
+      {
+        id: "wishlist-store-match",
+        title: "Wishlist × tiendas",
+        description: "Precio y stock en Game Nerdz y Miniature Market.",
+        Icon: StoreIcon,
+      },
+      {
+        id: "wishlist-market",
+        title: "Wishlist × BGG Market",
+        description: "Ofertas de GeekMarket y alertas de precio.",
+        Icon: MarketIcon,
+      },
+    ],
   },
   {
-    id: "hotness-scout",
-    title: "Hotness scout",
-    description:
-      "Compara la hot list de BGG con tu colección owned para ver qué tendencias encajan con tu mesa.",
-    Icon: HotnessIcon,
+    title: "Descubrir",
+    items: [
+      {
+        id: "purchase-validator",
+        title: "Validador de compras",
+        description: "¿Encaja este juego con tu colección?",
+        Icon: CartIcon,
+      },
+      {
+        id: "game-compare",
+        title: "Comparador de juegos",
+        description: "Hasta 4 títulos lado a lado: ficha y solapes.",
+        Icon: CompareIcon,
+      },
+      {
+        id: "hotness-scout",
+        title: "Hotness scout",
+        description: "La hot list de BGG frente a tu mesa owned.",
+        Icon: HotnessIcon,
+      },
+    ],
   },
   {
-    id: "smart-wishlist",
-    title: "Wishlist inteligente",
-    description:
-      "Prioriza tu wishlist según cómo juegas y filtra por huecos de tu mesa.",
-    Icon: WishlistIcon,
-  },
-  {
-    id: "wishlist-store-match",
-    title: "Wishlist × tiendas",
-    description:
-      "Cruza tu wishlist con Game Nerdz y Miniature Market para ver precio y stock.",
-    Icon: StoreIcon,
-  },
-  {
-    id: "wishlist-market",
-    title: "Wishlist × BGG Market",
-    description:
-      "Ofertas de GeekMarket para tu wishlist, con novedades in-app al escanear.",
-    Icon: MarketIcon,
-  },
-  {
-    id: "pairwise-duel",
-    title: "Duel ranking del periodo",
-    description:
-      "Compara juegos jugados en un periodo y elige el que más disfrutaste hasta coronar un ganador.",
-    Icon: DuelIcon,
-  },
-  {
-    id: "what-to-play",
-    title: "Qué jugar esta noche",
-    description:
-      "Sugiere 3–5 juegos según jugadores, tiempo y peso opcional, con un score simple.",
-    Icon: DiceIcon,
-  },
-  {
-    id: "shelf-of-shame",
-    title: "Shelf of shame",
-    description:
-      "Owned sin partidas, los más antiguos primero. Un empujón amable a sacarlos a mesa.",
-    Icon: ShameIcon,
-  },
-  {
-    id: "play-calendar",
-    title: "Calendario / rachas",
-    description:
-      "Heatmap de partidas del último año, racha actual y mejor racha.",
-    Icon: CalendarIcon,
+    title: "Analizar",
+    items: [
+      {
+        id: "insights",
+        title: "Insights",
+        description: "Año a año, top 100 BGG y con quién juegas.",
+        Icon: InsightsIcon,
+      },
+      {
+        id: "pairwise-duel",
+        title: "Duel ranking del periodo",
+        description: "Elige el más disfrutado hasta coronar un ganador.",
+        Icon: DuelIcon,
+      },
+    ],
   },
 ];
 
-const iconClass = "h-9 w-9 text-accent";
+const iconClass = "h-10 w-10 text-accent";
 
 function DuelIcon() {
   return (
@@ -199,6 +219,15 @@ function MarketIcon() {
   );
 }
 
+function InsightsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 18V9M9 18V5M14 18v-7M19 18V7" strokeLinecap="round" />
+      <path d="M3 19h18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function HotnessIcon() {
   return (
     <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -280,6 +309,7 @@ export function ActivitiesPage({
           <WishlistStoreMatchActivity />
         ) : null}
         {active === "wishlist-market" ? <WishlistMarketActivity /> : null}
+        {active === "insights" ? <InsightsActivity /> : null}
         {active === "what-to-play" ? <WhatToPlayActivity /> : null}
         {active === "play-calendar" ? <PlayCalendarActivity /> : null}
         {active === "shelf-of-shame" ? <ShelfOfShameActivity /> : null}
@@ -295,29 +325,40 @@ export function ActivitiesPage({
           Herramientas para explorar tu ludoteca y validar futuras compras.
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {activities.map((activity) => (
-          <button
-            key={activity.id}
-            type="button"
-            onClick={() => setActive(activity.id)}
-            className="group relative flex min-h-11 flex-col items-center rounded-xl border border-border bg-surface-raised/60 p-4 text-center transition hover:border-accent/50 hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
-          >
-            {activity.id === "wishlist-market" && marketUnread > 0 ? (
-              <span className="absolute right-3 top-3 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-surface">
-                {marketUnread > 99 ? "99+" : marketUnread}
-              </span>
-            ) : null}
-            <div className="mb-3 flex h-12 w-12 items-center justify-center">
-              <activity.Icon />
-            </div>
-            <h3 className="text-lg font-bold leading-snug tracking-tight text-ink">
-              {activity.title}
+      <div className="space-y-5">
+        {activityGroups.map((group) => (
+          <section key={group.title}>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              {group.title}
             </h3>
-            <p className="mt-2 line-clamp-2 text-sm leading-snug text-muted">
-              {activity.description}
-            </p>
-          </button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {group.items.map((activity) => (
+                <button
+                  key={activity.id}
+                  type="button"
+                  onClick={() => setActive(activity.id)}
+                  className="group relative flex min-h-11 items-start gap-4 rounded-xl border border-border bg-surface-raised/60 px-4 py-3.5 text-left transition hover:border-accent/50 hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+                >
+                  {activity.id === "wishlist-market" && marketUnread > 0 ? (
+                    <span className="absolute right-2.5 top-2.5 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-surface">
+                      {marketUnread > 99 ? "99+" : marketUnread}
+                    </span>
+                  ) : null}
+                  <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center">
+                    <activity.Icon />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold leading-snug text-ink">
+                      {activity.title}
+                    </h3>
+                    <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted">
+                      {activity.description}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     </div>

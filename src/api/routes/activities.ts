@@ -25,6 +25,7 @@ import {
   runWishlistMarket,
   type WishlistMarketRunParams,
 } from "../../activities/wishlist-market/index.js";
+import { runInsights } from "../../activities/insights/index.js";
 import type { SmartWishlistMode } from "../../query/smart-wishlist.js";
 import { getActivityContext } from "../context.js";
 
@@ -79,10 +80,23 @@ activitiesRoutes.get("/shelf-of-shame", (c) => {
   const includeExpansions = c.req.query("includeExpansions") === "true";
   const limitRaw = c.req.query("limit");
   const limit = limitRaw ? Number(limitRaw) : undefined;
+  const playersRaw = c.req.query("players");
+  const players = playersRaw ? Number(playersRaw) : undefined;
+  const maxWeightRaw = c.req.query("maxWeight");
+  const maxWeight = maxWeightRaw ? Number(maxWeightRaw) : undefined;
+  const languageDependence =
+    c.req.query("languageDependence")?.trim() || undefined;
+  const categories = (c.req.queries("categories") ?? []).filter(Boolean);
+  const mechanics = (c.req.queries("mechanics") ?? []).filter(Boolean);
   const ctx = getActivityContext();
   const items = ctx.queries.queryShelfOfShame({
     includeExpansions,
     limit: Number.isFinite(limit) ? limit : undefined,
+    players: Number.isFinite(players) ? players : undefined,
+    maxWeight: Number.isFinite(maxWeight) ? maxWeight : undefined,
+    languageDependence,
+    categories: categories.length ? categories : undefined,
+    mechanics: mechanics.length ? mechanics : undefined,
   });
   return c.json({ total: items.length, items });
 });
@@ -193,6 +207,28 @@ activitiesRoutes.post("/wishlist-store-match", async (c) => {
   const body = (await c.req.json()) as WishlistStoreMatchRunParams;
   try {
     const result = await runWishlistStoreMatch(body, getActivityContext());
+    return c.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ message }, 400);
+  }
+});
+
+activitiesRoutes.get("/insights", async (c) => {
+  const yearRaw = c.req.query("year");
+  let year: number | undefined;
+  if (yearRaw) {
+    const parsed = Number(yearRaw);
+    if (!Number.isFinite(parsed) || parsed < 1970 || parsed > 2100) {
+      return c.json({ message: "year inválido" }, 400);
+    }
+    year = parsed;
+  }
+  try {
+    const result = await runInsights(
+      { year },
+      getActivityContext(),
+    );
     return c.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

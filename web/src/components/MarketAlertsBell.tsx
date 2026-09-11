@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { postWishlistMarket } from "../api/client";
 import type { MarketAlert } from "../api/types";
 import {
+  displayGameName,
+  marketConditionLabel,
+} from "../marketLabels";
+import {
   MARKET_ALERTS_CHANGED,
+  focusMarketGame,
   notifyMarketAlertsChanged,
 } from "../marketAlertsEvents";
 
@@ -116,11 +121,11 @@ export function MarketAlertsBell({ onOpenMarketActivity }: MarketAlertsBellProps
       <button
         type="button"
         onClick={() => void toggleOpen()}
-        title="Notificaciones Market"
+        title="Alertas de precio"
         aria-label={
           unread > 0
-            ? `Notificaciones Market, ${unread} sin leer`
-            : "Notificaciones Market"
+            ? `Alertas de precio, ${unread} sin leer`
+            : "Alertas de precio"
         }
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -147,12 +152,12 @@ export function MarketAlertsBell({ onOpenMarketActivity }: MarketAlertsBellProps
       {open ? (
         <div
           role="dialog"
-          aria-label="Novedades de BGG Market"
+          aria-label="Alertas de precio"
           className="absolute right-0 z-40 mt-2 w-[min(100vw-2rem,22rem)] rounded-xl border border-border bg-surface-raised shadow-lg"
         >
           <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
             <p className="text-sm font-semibold text-ink">
-              Market {unread > 0 ? `(${unread})` : ""}
+              Alertas de precio {unread > 0 ? `(${unread})` : ""}
             </p>
             {unread > 0 ? (
               <button
@@ -170,26 +175,41 @@ export function MarketAlertsBell({ onOpenMarketActivity }: MarketAlertsBellProps
               <p className="px-3 py-4 text-sm text-muted">Cargando…</p>
             ) : alerts.length === 0 ? (
               <p className="px-3 py-4 text-sm text-muted">
-                Sin novedades. Escanea Wishlist × BGG Market para detectar
-                ofertas nuevas.
+                Sin alertas. Crea un precio objetivo en «Mis alertas» y te
+                avisaremos cuando una oferta encaje.
               </p>
             ) : (
               <ul className="divide-y divide-border">
                 {alerts.map((alert) => (
                   <li key={alert.id} className="px-3 py-2.5">
-                    <p className="text-sm font-medium text-ink">{alert.gameName}</p>
+                    <p className="text-sm font-medium text-ink">
+                      {displayGameName(alert.gameName, alert.bggId)}
+                    </p>
                     <p className="text-xs text-muted">
                       {formatAlertPrice(alert)}
-                      {alert.condition ? ` · ${alert.condition}` : ""}
+                      {alert.condition
+                        ? ` · ${marketConditionLabel(alert.condition)}`
+                        : ""}
                     </p>
                     <div className="mt-1.5 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpen(false);
+                          onOpenMarketActivity();
+                          focusMarketGame(alert.bggId);
+                        }}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Ver ofertas
+                      </button>
                       <a
                         href={alert.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-xs text-accent hover:underline"
+                        className="text-xs text-muted hover:text-ink"
                       >
-                        Ver oferta
+                        Market
                       </a>
                       <button
                         type="button"

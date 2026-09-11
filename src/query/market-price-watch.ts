@@ -74,15 +74,90 @@ export function findWatchMatchesForListings(
     }));
 }
 
-function gameNameForBggId(
+export function resolveGameDisplayName(
   db: Db,
   bggId: number,
   fallback?: string,
 ): string {
   const row = db
-    .prepare(`SELECT name FROM collection_entries WHERE bgg_id = ? LIMIT 1`)
-    .get(bggId) as { name: string } | undefined;
-  return row?.name ?? fallback ?? String(bggId);
+    .prepare(
+      `SELECT COALESCE(g.name, ce.name) AS name
+       FROM collection_entries ce
+       LEFT JOIN games g ON g.bgg_id = ce.bgg_id
+       WHERE ce.bgg_id = ?
+       LIMIT 1`,
+    )
+    .get(bggId) as { name: string | null } | undefined;
+  const candidates = [row?.name, fallback];
+  for (const raw of candidates) {
+    const name = raw?.trim();
+    if (name && name.toLowerCase() !== "unknown" && !/^thing\s+\d+$/i.test(name)) {
+      return name;
+    }
+  }
+  return `Juego #${bggId}`;
+}
+
+function gameNameForBggId(
+  db: Db,
+  bggId: number,
+  fallback?: string,
+): string {
+  return resolveGameDisplayName(db, bggId, fallback);
+}
+
+/** Notifications only for enabled price watches — not every new Market listing. */
+export function recordWatchHitsFromListings(
+  db: Db,
+  listingsById: Map<number, MarketListing[]>,
+  namesById?: Map<number, string>,
+): { listingsMatched: number; newAlerts: number; digestHits: WatchMatchHit[] } {
+  const watches = listEnabledMarketPriceWatches(db);
+  let listingsMatched = 0;
+  let newAlerts = 0;
+  const digestHits: WatchMatchHit[] = [];
+
+  for (const watch of watches) {
+    const listings = listingsById.get(watch.bggId) ?? [];
+    const gameName = gameNameForBggId(
+      db,
+      watch.bggId,
+      namesById?.get(watch.bggId),
+    );
+
+    for (const listing of listings) {
+      if (!listingMatchesWatch(listing, watch)) continue;
+      listingsMatched += 1;
+
+      const isNewNotification = insertWatchNotificationIfNew(
+        db,
+        watch.bggId,
+        listing.listingKey,
+      );
+      if (!isNewNotification) continue;
+
+      const inserted = insertMarketAlertIfNew(db, {
+        bggId: watch.bggId,
+        listingKey: listing.listingKey,
+        gameName,
+        price: listing.price,
+        currency: listing.currency,
+        condition: listing.condition,
+        url: listing.url,
+      });
+      if (inserted) newAlerts += 1;
+
+      digestHits.push({
+        bggId: watch.bggId,
+        gameName,
+        listing,
+        watch,
+        ceiling: effectivePriceCeiling(watch.maxPrice, watch.tolerancePct),
+      });
+    }
+  }
+
+  return { listingsMatched, newAlerts, digestHits };
 }
 
 export async function runMarketWatchCron(
@@ -167,45 +242,10 @@ export async function runMarketWatchCron(
     };
   }
 
-  for (const watch of watches) {
-    const listings = listingsById.get(watch.bggId) ?? [];
-    const gameName = gameNameForBggId(
-      db,
-      watch.bggId,
-      namesById.get(watch.bggId),
-    );
-
-    for (const listing of listings) {
-      if (!listingMatchesWatch(listing, watch)) continue;
-      listingsMatched += 1;
-
-      const isNewNotification = insertWatchNotificationIfNew(
-        db,
-        watch.bggId,
-        listing.listingKey,
-      );
-      if (!isNewNotification) continue;
-
-      const inserted = insertMarketAlertIfNew(db, {
-        bggId: watch.bggId,
-        listingKey: listing.listingKey,
-        gameName,
-        price: listing.price,
-        currency: listing.currency,
-        condition: listing.condition,
-        url: listing.url,
-      });
-      if (inserted) newAlerts += 1;
-
-      digestHits.push({
-        bggId: watch.bggId,
-        gameName,
-        listing,
-        watch,
-        ceiling: effectivePriceCeiling(watch.maxPrice, watch.tolerancePct),
-      });
-    }
-  }
+  const recorded = recordWatchHitsFromListings(db, listingsById, namesById);
+  listingsMatched = recorded.listingsMatched;
+  newAlerts = recorded.newAlerts;
+  digestHits.push(...recorded.digestHits);
 
   let emailsSent = 0;
   const notifyEmail = getNotifyEmail(db);

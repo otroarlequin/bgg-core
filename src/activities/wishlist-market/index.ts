@@ -40,7 +40,7 @@ export async function runWishlistMarket(
   if (action === "listAlerts") {
     const status = getWishlistMarketAlertStatus(db);
     return {
-      message: `${status.alertsUnread} novedades sin revisar.`,
+      message: `${status.alertsUnread} alerta${status.alertsUnread === 1 ? "" : "s"} de precio sin revisar.`,
       scanned: 0,
       withListings: 0,
       noListing: 0,
@@ -112,6 +112,6 @@ export const wishlistMarketActivity: Activity<
   name: "Wishlist × BGG Market",
   kind: "analytical",
   description:
-    "Detecta ofertas del BGG Market para tu wishlist y guarda novedades in-app.",
+    "Ofertas de GeekMarket para tu wishlist y alertas de precio por juego.",
   run: runWishlistMarket,
 };

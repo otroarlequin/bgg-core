@@ -3,6 +3,8 @@ import { useState, type ReactNode } from "react";
 interface CollapsiblePanelProps {
   title: string;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: ReactNode;
   /** Shown when collapsed, e.g. active filter count */
   summary?: string;
@@ -14,19 +16,27 @@ interface CollapsiblePanelProps {
 export function CollapsiblePanel({
   title,
   defaultOpen = true,
+  open: openProp,
+  onOpenChange,
   children,
   summary,
   actions,
   className = "rounded-xl border border-border bg-surface-raised/60",
 }: CollapsiblePanelProps) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const open = openProp ?? uncontrolledOpen;
+
+  function setOpen(next: boolean) {
+    if (openProp === undefined) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  }
 
   return (
     <div className={className}>
       <div className="flex w-full items-center gap-2 px-4 py-3">
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen(!open)}
           className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
           aria-expanded={open}
         >
