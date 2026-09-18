@@ -7,6 +7,9 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- Workflow **Market price watches cron**: wake de `/api/health` antes del POST, reintentos en 502/503 y cuerpo HTTP visible en fallos (evita exit 22 por cold start de Fly).
+
 ### Added
 - Actividad **Insights**: año a año (adquisiciones vs bajas), top 100 BGG frente a la mesa, distribución de jugadores/peso; `GET /api/activities/insights` + UI.
 - Historial de estado de colección (`collection_status_events`) con baseline y diffs en sync.

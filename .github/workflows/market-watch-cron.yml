@@ -10,6 +10,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger market watch cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BGG_CORE_URL: ${{ vars.BGG_CORE_URL || 'https://bgg-core.fly.dev' }}
         run: |
-          curl -sf -X POST "${{ vars.BGG_CORE_URL || 'https://bgg-core.fly.dev' }}/api/cron/market-watches" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          set -euo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET vacío en GitHub Actions. Añádelo en Settings → Secrets."
+            exit 1
+          fi
+          echo "POST ${BGG_CORE_URL}/api/cron/market-watches"
+
+          # Despertar máquina (auto_stop) antes del cron
+          for i in 1 2 3 4 5; do
+            code="$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 \
+              "${BGG_CORE_URL}/api/health" || echo "000")"
+            echo "health attempt ${i}: HTTP ${code}"
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            sleep 5
+          done
+
+          body="$(mktemp)"
+          code="000"
+          for i in 1 2 3; do
+            code="$(curl -sS -o "$body" -w "%{http_code}" --max-time 120 \
+              -X POST "${BGG_CORE_URL}/api/cron/market-watches" \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -H "Content-Type: application/json" || echo "000")"
+            echo "cron attempt ${i}: HTTP ${code}"
+            if [ "$code" = "200" ]; then
+              echo "body:"
+              head -c 2000 "$body" || true
+              echo
+              exit 0
+            fi
+            # Reintentar wake / proxy errors
+            if [ "$code" = "502" ] || [ "$code" = "503" ] || [ "$code" = "000" ]; then
+              sleep 8
+              continue
+            fi
+            break
+          done
+
+          echo "body:"
+          head -c 2000 "$body" || true
+          echo
+          echo "::error::Cron falló con HTTP ${code} (401=CRON_SECRET distinto entre GitHub y Fly; 500=error app/BGG; 502/503=cold start)."
+          exit 1
