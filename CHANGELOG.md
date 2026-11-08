@@ -11,12 +11,14 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Workflow **Market price watches cron**: wake de `/api/health` antes del POST, reintentos en 502/503 y cuerpo HTTP visible en fallos (evita exit 22 por cold start de Fly).
 
 ### Added
+- **Sync BGG diario en Fly:** `POST /api/cron/bgg-sync` (colección + partidas incremental, protegido con `CRON_SECRET`, máx. 1×/20 h, `?force=1` lo salta). Lo llama el workflow del cron de Market en la misma corrida, sin despertares extra de la máquina.
 - Actividad **Insights**: año a año (adquisiciones vs bajas), top 100 BGG frente a la mesa, distribución de jugadores/peso; `GET /api/activities/insights` + UI.
 - Historial de estado de colección (`collection_status_events`) con baseline y diffs en sync.
 - Caché de ranks del browse BGG (top 100) para Insights.
 - Script `npm run fly:cost` para estimar coste de máquinas Fly.
 
 ### Changed
+- `npm run db:push` sincroniza colección y partidas en local antes de subir (evita que un local desactualizado haga retroceder Fly); aborta si falla, `--skip-bgg-sync` lo omite.
 - **Wishlist × BGG Market:** caché al entrar (`action: "status"`), botón «Actualizar Market» aparte de filtros; notificaciones solo por alertas de precio (watches), no por cada listing; cards con «Alerta +/✎» y scroll a ofertas desde campana/watches.
 - Hub **Actividades:** agrupado (Mesa / Wishlist / Descubrir / Analizar) y tiles/iconos más legibles.
 - **Resumen:** paneles densos de métricas en lugar de StatCards enormes.

@@ -46,6 +46,9 @@ El **username** efectivo es el guardado en Configuración (tabla `app_settings`)
 | CLI colección | `npm run sync:collection` (`--full` para completa) |
 | CLI partidas | `npm run sync:plays` (`--full` para completa) |
 | CLI metadatos | `npm run sync:things` (`--force` para re-sync; no está en el botón) |
+| Cron Fly (diario) | `POST /api/cron/bgg-sync` con `CRON_SECRET`; colección + partidas incremental, máx. 1 vez cada 20 h (`?force=1` lo salta) |
+
+**Sync diario en Fly:** el workflow de GitHub Actions del cron de Market llama primero a `/api/cron/bgg-sync` en la misma corrida, así que no añade despertares de la máquina. Como corre 2×/día, el servidor solo sincroniza si el último sync de colección tiene ≥20 h.
 
 En Fly hace falta `BGG_TOKEN`. `BGG_USERNAME` sigue siendo el default hasta que guardes otro en Configuración (DB del volumen).
 
@@ -56,17 +59,19 @@ Dos SQLite (PC y volumen Fly). Se alinean **solo cuando lo pidas** (protege duel
 ```bash
 npm run db:status    # Reporte de discrepancias (no escribe)
 npm run db:pull      # Fly → local (backup en data/backups/)
-npm run db:push      # local → Fly (unión + asserts; fail-closed)
+npm run db:push      # sync BGG local + local → Fly (unión + asserts; fail-closed)
 ```
 
 `npm run db:upload` es alias deprecado de `db:push`.
+
+`db:push` sincroniza colección y partidas en local (incremental) antes de subir, porque Fly ya se sincroniza solo y un local desactualizado lo haría retroceder. Si el sync falla, aborta; `--skip-bgg-sync` lo omite.
 
 ### Al volver a casa
 
 1. `npm run db:status`
 2. `npm run db:pull` si Fly tiene datos de app nuevos
 3. Opcional: sync BGG en local si collection/plays remotos iban adelante
-4. `npm run db:push` solo si local tiene app data que Fly no
+4. `npm run db:push` solo si local tiene app data que Fly no (ya incluye el sync BGG local)
 
 ### Flags útiles
 
@@ -75,6 +80,7 @@ npm run db:status -- --app bgg-core --local ./data/bgg.db
 npm run db:push -- --fail-on-conflict
 npm run db:push -- --skip-download --old ./tmp/remote.db
 npm run db:push -- --local-only --old ./tmp/remote.db --out ./data/bgg-merged.db
+npm run db:push -- --skip-bgg-sync
 ```
 
 `--i-know-this-can-wipe-app-data` permite push sin remoto: **peligroso**, puede borrar duels/reviews de prod.
@@ -173,4 +179,4 @@ API watches: `GET/PUT/PATCH/DELETE /api/market-watches`.
 ## Qué no hacer
 
 - No subas un `.db` local a Fly con `sftp put` manual sin merge: puedes perder `duel_*` y `purchase_reviews`.
-- No uses sync continuo/cron general: el único cron previsto es el de **price watches** (acotado).
+- No añadas crons con despertares propios: el sync BGG diario y las price watches van en la **misma** corrida del workflow (2×/día) para no gastar Fly ni rate limit de BGG.

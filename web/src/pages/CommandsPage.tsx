@@ -128,6 +128,11 @@ npm run dev:profile:all  # Profile :3002 + Vite → /profile`}</CodeBlock>
               name: "npm run sync:things",
               detail: "Metadatos /thing; --force para re-sync. No está en el botón.",
             },
+            {
+              name: "POST /api/cron/bgg-sync",
+              detail:
+                "Fly, diario vía GitHub Actions (misma corrida que Market). Máx. 1×/20 h; ?force=1 lo salta.",
+            },
           ]}
         />
       </Section>
@@ -149,7 +154,8 @@ npm run dev:profile:all  # Profile :3002 + Vite → /profile`}</CodeBlock>
             },
             {
               name: "npm run db:push",
-              detail: "local → Fly. Unión + asserts; fail-closed sin remoto.",
+              detail:
+                "Sync BGG local + local → Fly. Unión + asserts; fail-closed sin remoto. --skip-bgg-sync omite el sync.",
             },
             {
               name: "npm run db:upload",
@@ -219,8 +225,9 @@ npm run build:all`}</CodeBlock>
             <code className="text-ink-soft">purchase_reviews</code>.
           </li>
           <li>
-            No configures sync continuo/cron: el diseño es on-demand para no gastar
-            Fly ni rate limit de BGG.
+            No añadas crons con despertares propios: el sync BGG diario y las
+            alertas de precio van en la misma corrida (2×/día) para no gastar Fly
+            ni rate limit de BGG.
           </li>
         </ul>
       </Section>

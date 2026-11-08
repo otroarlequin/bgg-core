@@ -13,6 +13,7 @@
  *   --i-know-this-can-wipe-app-data   (permite push sin remoto; PELIGROSO)
  *   --skip-download --old ./tmp/remote.db
  *   --local-only --out ./data/bgg-merged.db   (merge a archivo, no sube)
+ *   --skip-bgg-sync   (push sin sync incremental BGG previo en local)
  */
 import {
   copyFileSync,
@@ -25,12 +26,14 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
-import { loadConfig } from "../src/config/index.js";
+import { loadConfig, type AppConfig } from "../src/config/index.js";
+import { createDatabase } from "../src/storage/database.js";
 import {
   assertNoAppDataLoss,
   compareAppDatabases,
   unionAppTablesInto,
 } from "../src/storage/reconcile-app-tables.js";
+import { runIncrementalBggSync } from "../src/sync/incremental.js";
 
 type Command = "status" | "pull" | "push";
 
@@ -160,7 +163,30 @@ function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-function main(): void {
+/** Fly syncs BGG on its own now; pushing a stale local copy would roll it back. */
+async function syncLocalBggBeforePush(
+  localDb: string,
+  config: AppConfig,
+): Promise<void> {
+  console.log("Sync BGG incremental en local antes de subir...");
+  const db = createDatabase(localDb);
+  try {
+    const result = await runIncrementalBggSync(db, config);
+    console.log(
+      `Sync local OK (@${result.username}): colección ${result.collection?.count ?? 0}, partidas ${result.plays?.count ?? 0}, ${(result.durationMs / 1000).toFixed(1)}s`,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      `No se pudo sincronizar BGG en local: ${message}\nAbortando push. Usa --skip-bgg-sync si quieres subir igualmente.`,
+    );
+    process.exit(1);
+  } finally {
+    db.close();
+  }
+}
+
+async function main(): Promise<void> {
   const command = resolveCommand();
   const config = loadConfig();
   const localDb = resolve(argValue("--local") ?? argValue("--new") ?? config.dbPath);
@@ -174,6 +200,10 @@ function main(): void {
   if (!existsSync(localDb)) {
     console.error(`Local DB not found: ${localDb}`);
     process.exit(1);
+  }
+
+  if (command === "push" && !hasFlag("--skip-bgg-sync")) {
+    await syncLocalBggBeforePush(localDb, config);
   }
 
   const workDir = mkdtempSync(join(tmpdir(), "bgg-reconcile-"));
@@ -285,4 +315,7 @@ function main(): void {
   console.log("Done.");
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

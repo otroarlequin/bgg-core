@@ -9,19 +9,18 @@ jobs:
   poll:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger market watch cron
+      - name: Trigger BGG sync and market watch cron
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           BGG_CORE_URL: ${{ vars.BGG_CORE_URL || 'https://bgg-core.fly.dev' }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           if [ -z "${CRON_SECRET:-}" ]; then
             echo "::error::CRON_SECRET vacío en GitHub Actions. Añádelo en Settings → Secrets."
             exit 1
           fi
-          echo "POST ${BGG_CORE_URL}/api/cron/market-watches"
 
-          # Despertar máquina (auto_stop) antes del cron
+          # Despertar máquina (auto_stop) antes de los crons
           for i in 1 2 3 4 5; do
             code="$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 \
               "${BGG_CORE_URL}/api/health" || echo "000")"
@@ -32,30 +31,36 @@ jobs:
             sleep 5
           done
 
-          body="$(mktemp)"
-          code="000"
-          for i in 1 2 3; do
-            code="$(curl -sS -o "$body" -w "%{http_code}" --max-time 120 \
-              -X POST "${BGG_CORE_URL}/api/cron/market-watches" \
-              -H "Authorization: Bearer ${CRON_SECRET}" \
-              -H "Content-Type: application/json" || echo "000")"
-            echo "cron attempt ${i}: HTTP ${code}"
-            if [ "$code" = "200" ]; then
-              echo "body:"
-              head -c 2000 "$body" || true
-              echo
-              exit 0
+          # POST a /api/cron/<path> con reintentos en cold start; 0 = OK.
+          post_cron() {
+            local path="$1"
+            local body code
+            body="$(mktemp)"
+            code="000"
+            for i in 1 2 3; do
+              code="$(curl -sS -o "$body" -w "%{http_code}" --max-time 180 \
+                -X POST "${BGG_CORE_URL}/api/cron/${path}" \
+                -H "Authorization: Bearer ${CRON_SECRET}" \
+                -H "Content-Type: application/json" || echo "000")"
+              echo "${path} attempt ${i}: HTTP ${code}"
+              if [ "$code" = "502" ] || [ "$code" = "503" ] || [ "$code" = "000" ]; then
+                sleep 8
+                continue
+              fi
+              break
+            done
+            echo "${path} body:"
+            head -c 2000 "$body" || true
+            echo
+            if [ "$code" != "200" ]; then
+              echo "::error::${path} falló con HTTP ${code} (401=CRON_SECRET distinto entre GitHub y Fly; 500=error app/BGG; 502/503=cold start)."
+              return 1
             fi
-            # Reintentar wake / proxy errors
-            if [ "$code" = "502" ] || [ "$code" = "503" ] || [ "$code" = "000" ]; then
-              sleep 8
-              continue
-            fi
-            break
-          done
+            return 0
+          }
 
-          echo "body:"
-          head -c 2000 "$body" || true
-          echo
-          echo "::error::Cron falló con HTTP ${code} (401=CRON_SECRET distinto entre GitHub y Fly; 500=error app/BGG; 502/503=cold start)."
-          exit 1
+          status=0
+          # Sync incremental colección + partidas; el servidor lo limita a 1×/día.
+          post_cron "bgg-sync" || status=1
+          post_cron "market-watches" || status=1
+          exit "$status"

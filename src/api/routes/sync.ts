@@ -1,14 +1,12 @@
 import { Hono } from "hono";
-import { createBggClient } from "../../bgg/client.js";
 import { loadConfig } from "../../config/index.js";
-import { requireEffectiveBggCredentials } from "../../config/bgg-username.js";
-import { createStorageService } from "../../storage/index.js";
-import { syncCollection, syncPlays } from "../../sync/index.js";
+import {
+  isBggSyncInFlight,
+  runIncrementalBggSync,
+} from "../../sync/incremental.js";
 import { getDb } from "../context.js";
 
 export const syncRoutes = new Hono();
-
-let syncInFlight = false;
 
 export interface SyncApiResult {
   ok: boolean;
@@ -20,7 +18,7 @@ export interface SyncApiResult {
 }
 
 syncRoutes.post("/", async (c) => {
-  if (syncInFlight) {
+  if (isBggSyncInFlight()) {
     return c.json(
       {
         ok: false,
@@ -52,33 +50,12 @@ syncRoutes.post("/", async (c) => {
   }
 
   const started = Date.now();
-  syncInFlight = true;
   try {
-    const config = loadConfig();
-    const db = getDb();
-    const { token, username } = requireEffectiveBggCredentials(db, config);
-    const client = createBggClient(token);
-    const storage = createStorageService(db);
-
-    const result: SyncApiResult = {
-      ok: true,
-      username,
-      durationMs: 0,
-    };
-
-    if (doCollection) {
-      result.collection = await syncCollection(storage, client, username, {
-        incremental: true,
-      });
-    }
-    if (doPlays) {
-      result.plays = await syncPlays(storage, client, username, {
-        incremental: true,
-      });
-    }
-
-    result.durationMs = Date.now() - started;
-    return c.json(result);
+    const result = await runIncrementalBggSync(getDb(), loadConfig(), {
+      collection: doCollection,
+      plays: doPlays,
+    });
+    return c.json({ ok: true, ...result } satisfies SyncApiResult);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return c.json(
@@ -89,7 +66,5 @@ syncRoutes.post("/", async (c) => {
       } satisfies SyncApiResult,
       400,
     );
-  } finally {
-    syncInFlight = false;
   }
 });
