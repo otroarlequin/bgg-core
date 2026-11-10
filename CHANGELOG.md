@@ -8,9 +8,11 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Fixed
+- **Wishlist × tiendas:** un juego base ya no se empareja con su expansión («Galileo Galilei» ≠ «… - Luna Expansion») ni una expansión con el juego base solo («Ironwood: Steel & Spirit» ≠ «Ironwood»), en todas las tiendas. «4th» y «Fourth» cuentan como la misma edición.
 - Workflow **Market price watches cron**: wake de `/api/health` antes del POST, reintentos en 502/503 y cuerpo HTTP visible en fallos (evita exit 22 por cold start de Fly).
 
 ### Added
+- **Wishlist × tiendas: Noble Knight** como tercera tienda (API de búsqueda Zoovu). Muestra la condición de cada copia (Nuevo / Sellado / Usado + grado NK, p. ej. `VG+/NM`); el precio es el de la copia más barata en stock y el resto aparece como «Otras copias». Solo juegos (descarta playmats, inserts, fundas y bundles).
 - **Sync BGG diario en Fly:** `POST /api/cron/bgg-sync` (colección + partidas incremental, protegido con `CRON_SECRET`, máx. 1×/20 h, `?force=1` lo salta). Lo llama el workflow del cron de Market en la misma corrida, sin despertares extra de la máquina.
 - Actividad **Insights**: año a año (adquisiciones vs bajas), top 100 BGG frente a la mesa, distribución de jugadores/peso; `GET /api/activities/insights` + UI.
 - Historial de estado de colección (`collection_status_events`) con baseline y diffs en sync.

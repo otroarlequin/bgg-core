@@ -115,7 +115,7 @@ Ejemplos: duel ranking, validador, comparador, wishlist inteligente / tiendas / 
 
 Datos sensibles (`*.db`, `.env`, `data/`) no van al git (`.gitignore`).
 
-**API externa de datos:** BoardGameGeek (`xmlapi2` + token). Las actividades de tiendas llaman además a Game Nerdz / Miniature Market (HTTP). No hay Postgres, Redis ni cola de mensajes.
+**API externa de datos:** BoardGameGeek (`xmlapi2` + token). Las actividades de tiendas llaman además a Game Nerdz / Miniature Market / Noble Knight (HTTP; Noble Knight vía la API de búsqueda Zoovu). No hay Postgres, Redis ni cola de mensajes.
 
 ### Arranque local
 

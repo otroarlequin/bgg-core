@@ -55,6 +55,6 @@ export const wishlistStoreMatchActivity: Activity<
   name: "Wishlist × tiendas",
   kind: "analytical",
   description:
-    "Busca ofertas de tu wishlist en Game Nerdz y Miniature Market (uso personal).",
+    "Busca ofertas de tu wishlist en Game Nerdz, Miniature Market y Noble Knight (con condición de copias usadas; uso personal).",
   run: runWishlistStoreMatch,
 };

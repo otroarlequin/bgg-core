@@ -1,0 +1,99 @@
+{
+  "searchResults": [
+    {
+      "type": "products",
+      "name": "Products",
+      "totalResults": 4,
+      "results": [
+        [
+          {
+            "name": "Wingspan w/Swift Start Pack",
+            "link": "/P/2147774550/Wingspan-w-Swift-Start-Pack",
+            "dataPoints": [
+              { "key": "Available", "value": "In Stock" },
+              { "key": "Quantity", "value": "29.00" },
+              { "key": "Price", "value": "58.95" },
+              { "key": "Condition", "value": "SW (MINT/New)" },
+              { "key": "Publisher", "value": "Stonemaier Games" },
+              { "key": "Product Types", "value": "Boxed Game" },
+              { "key": "Product Line", "value": "Wingspan" },
+              { "key": "Category", "value": "Board Games" },
+              { "key": "Product Code", "value": "STM910" }
+            ]
+          },
+          {
+            "name": "Wingspan w/Swift Start Pack",
+            "link": "/P/2147774550/Wingspan-w-Swift-Start-Pack",
+            "dataPoints": [
+              { "key": "Available", "value": "In Stock" },
+              { "key": "Quantity", "value": "5.00" },
+              { "key": "Price", "value": "55.00" },
+              { "key": "Condition", "value": "VG+/NM" },
+              { "key": "Publisher", "value": "Stonemaier Games" },
+              { "key": "Product Types", "value": "Boxed Game" },
+              { "key": "Product Line", "value": "Wingspan" },
+              { "key": "Category", "value": "Board Games" }
+            ]
+          },
+          {
+            "name": "Wingspan w/Swift Start Pack",
+            "link": "/P/2147774550/Wingspan-w-Swift-Start-Pack",
+            "dataPoints": [
+              { "key": "Available", "value": "In Stock" },
+              { "key": "Quantity", "value": "1.00" },
+              { "key": "Price", "value": "56.50" },
+              { "key": "Condition", "value": "SW (VG+/New)" },
+              { "key": "Product Types", "value": "Boxed Game" },
+              { "key": "Category", "value": "Board Games" }
+            ]
+          }
+        ],
+        [
+          {
+            "name": "Wingspan Oceania Playmat",
+            "link": "/P/2148503714/Wingspan-Oceania-Playmat",
+            "dataPoints": [
+              { "key": "Available", "value": "In Stock" },
+              { "key": "Quantity", "value": "4.00" },
+              { "key": "Price", "value": "18.00" },
+              { "key": "Condition", "value": "NM" },
+              { "key": "Product Types", "value": "Playmats" },
+              { "key": "Product Line", "value": "Wingspan" },
+              { "key": "Category", "value": "Dice & Supplies" }
+            ]
+          }
+        ],
+        [
+          {
+            "name": "European Expansion",
+            "link": "/P/2147800001/European-Expansion",
+            "dataPoints": [
+              { "key": "Available", "value": "In Stock" },
+              { "key": "Quantity", "value": "3.00" },
+              { "key": "Price", "value": "22.70" },
+              { "key": "Condition", "value": "MINT/New" },
+              { "key": "Publisher", "value": "Stonemaier Games" },
+              { "key": "Product Types", "value": "Boxed Game" },
+              { "key": "Product Line", "value": "Wingspan" },
+              { "key": "Category", "value": "Board Games" }
+            ]
+          }
+        ],
+        [
+          {
+            "name": "Crew, The - The Quest for Planet Nine",
+            "link": "/P/2148000002/The-Crew",
+            "dataPoints": [
+              { "key": "Available", "value": "Out of Stock" },
+              { "key": "Quantity", "value": "0.00" },
+              { "key": "Product Types", "value": "Boxed Game" },
+              { "key": "Product Line", "value": "Card Games (Thames & Kosmos)" },
+              { "key": "Category", "value": "Board Games" }
+            ]
+          }
+        ]
+      ]
+    },
+    { "type": "custom", "results": [] }
+  ]
+}

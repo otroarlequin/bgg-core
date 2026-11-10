@@ -85,8 +85,8 @@ Documentos relacionados: [ARCHITECTURE.md](./ARCHITECTURE.md), [COMMANDS.md](./C
 | | |
 |--|--|
 | **ID** | `wishlist-store-match` |
-| **Objetivo** | Cruzar wishlist con stock/precio en Game Nerdz y Miniature Market. |
-| **Cómo** | Búsqueda en vivo por ítem; match estricto por título/editorial; caché SQLite 24h; rate limit. |
+| **Objetivo** | Cruzar wishlist con stock/precio en Game Nerdz, Miniature Market y Noble Knight. |
+| **Cómo** | Búsqueda en vivo por ítem; match estricto por título/editorial; juego base y expansión no se cruzan; caché SQLite 24h; rate limit. Noble Knight (API Zoovu) lista copias graduadas: se muestra la condición (Nuevo / Sellado / Usado + grado NK) y el precio es el de la copia más barata en stock, con las demás como «Otras copias». Solo productos `Boxed Game` / `Blister` / `Ziplock` de Board Games. |
 | **Deps** | Red a tiendas; pensado para uso **personal local** (no Amazon ni CSV). |
 | **Personal** | Sí. |
 | **Profile** | Puede estar limitado por política de producto / rate; no es el foco de visitantes. |

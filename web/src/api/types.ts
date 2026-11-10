@@ -489,7 +489,16 @@ export interface HotnessScoutResult {
   profile: SmartWishlistResult["profile"];
 }
 
-export type StoreId = "gamenerdz" | "miniaturemarket";
+export type StoreId = "gamenerdz" | "miniaturemarket" | "nobleknight";
+
+export type ConditionKind = "new" | "sealed" | "used";
+
+export interface StoreOfferVariant {
+  condition: string;
+  conditionKind: ConditionKind;
+  price: number;
+  quantity: number | null;
+}
 
 export interface ScoredStoreOffer {
   store: StoreId;
@@ -500,6 +509,9 @@ export interface ScoredStoreOffer {
   sku: string | null;
   inStock: boolean | null;
   publisher: string | null;
+  condition?: string | null;
+  conditionKind?: ConditionKind | null;
+  variants?: StoreOfferVariant[];
   score: number;
 }
 

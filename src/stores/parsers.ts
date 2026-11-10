@@ -1,4 +1,8 @@
-import type { StoreOffer } from "./types.js";
+import type {
+  ConditionKind,
+  StoreOffer,
+  StoreOfferVariant,
+} from "./types.js";
 
 interface StorePassProduct {
   name?: string;
@@ -144,6 +148,126 @@ export function parseMiniatureMarketSuggestHtml(
       sku: skuMatch?.[1] ?? null,
       inStock: isPreorder ? false : true,
       publisher: null,
+    });
+  }
+
+  return offers;
+}
+
+interface ZoovuDataPoint {
+  key?: string;
+  value?: unknown;
+}
+
+interface ZoovuProductVariant {
+  name?: string;
+  link?: string;
+  dataPoints?: ZoovuDataPoint[];
+}
+
+interface ZoovuSearchResponse {
+  searchResults?: Array<{
+    type?: string;
+    /** One inner array per product; each entry is a graded copy. */
+    results?: ZoovuProductVariant[][];
+  }>;
+}
+
+function zoovuData(variant: ZoovuProductVariant): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const dp of variant.dataPoints ?? []) {
+    if (!dp.key || dp.value == null) continue;
+    out.set(dp.key, String(dp.value).trim());
+  }
+  return out;
+}
+
+/**
+ * Noble Knight grade codes: "MINT/New" is factory new; "SW (...)" is still
+ * shrink-wrapped; anything else ("VG+/NM" box/contents, "EX", "Fair") is used.
+ */
+export function classifyNobleKnightCondition(code: string): ConditionKind {
+  const c = code.trim();
+  if (/MINT\/New/i.test(c) || /^(MINT|New)$/i.test(c)) return "new";
+  if (/^SW\b/i.test(c)) return "sealed";
+  return "used";
+}
+
+/** Physical games; excludes playmats, inserts, sleeves, parts and "Collection" bundles. */
+const NOBLE_KNIGHT_GAME_TYPES = new Set(["boxed game", "blister", "ziplock"]);
+
+/**
+ * NK names expansions without the base game ("Jagged Earth" in line "Spirit
+ * Island"), so prefix the product line unless it is a generic shelf name.
+ */
+function nobleKnightMatchName(name: string, productLine: string | undefined): string {
+  const line = productLine?.replace(/\([^)]*\)/g, "").trim();
+  if (!line || /\b(games?|collections?|miscellaneous|promos?)\b/i.test(line)) {
+    return name;
+  }
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (norm(name).includes(norm(line))) return name;
+  return `${line} - ${name}`;
+}
+
+/**
+ * Parse Noble Knight's Zoovu search JSON. Each product groups its graded
+ * copies; out-of-stock copies carry no price/condition and are dropped.
+ */
+export function parseNobleKnightSearchJson(
+  raw: unknown,
+  limit = 10,
+): StoreOffer[] {
+  const data = raw as ZoovuSearchResponse;
+  const products =
+    data.searchResults?.find((s) => s.type === "products")?.results ?? [];
+  const offers: StoreOffer[] = [];
+
+  for (const group of products) {
+    if (offers.length >= limit) break;
+    if (!Array.isArray(group) || group.length === 0) continue;
+
+    const head = group[0];
+    const rawName = head.name?.trim();
+    const link = head.link?.trim();
+    if (!rawName || !link) continue;
+    const headData = zoovuData(head);
+    if (headData.get("Category") !== "Board Games") continue;
+    const productType = (headData.get("Product Types") ?? "").toLowerCase();
+    if (!NOBLE_KNIGHT_GAME_TYPES.has(productType)) continue;
+    const name = nobleKnightMatchName(rawName, headData.get("Product Line"));
+
+    const variants: StoreOfferVariant[] = [];
+    for (const copy of group) {
+      const dp = zoovuData(copy);
+      const condition = dp.get("Condition");
+      const price = Number(dp.get("Price"));
+      const quantity = Number(dp.get("Quantity"));
+      const available = /in stock/i.test(dp.get("Available") ?? "");
+      if (!condition || !Number.isFinite(price) || !available) continue;
+      variants.push({
+        condition,
+        conditionKind: classifyNobleKnightCondition(condition),
+        price,
+        quantity: Number.isFinite(quantity) ? quantity : null,
+      });
+    }
+    variants.sort((a, b) => a.price - b.price);
+    const cheapest = variants[0] ?? null;
+
+    offers.push({
+      store: "nobleknight",
+      name,
+      price: cheapest?.price ?? null,
+      currency: "USD",
+      url: link.startsWith("http") ? link : `https://www.nobleknight.com${link}`,
+      sku: headData.get("Product Code") || null,
+      inStock: variants.length > 0,
+      publisher: headData.get("Publisher") || null,
+      condition: cheapest?.condition ?? null,
+      conditionKind: cheapest?.conditionKind ?? null,
+      variants,
+      lineSubProduct: name !== rawName,
     });
   }
 

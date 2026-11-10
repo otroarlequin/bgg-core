@@ -1,20 +1,86 @@
 import { useState } from "react";
 import { postWishlistStoreMatch } from "../../api/client";
 import type {
+  ConditionKind,
   ScoredStoreOffer,
   StoreId,
   WishlistStoreMatchResult,
 } from "../../api/types";
 import { BggLink } from "../../components/BggLink";
 
-const STORE_OPTIONS: Array<{ id: StoreId; label: string }> = [
-  { id: "gamenerdz", label: "Game Nerdz" },
-  { id: "miniaturemarket", label: "Miniature Market" },
-];
+const STORE_LABELS: Record<StoreId, string> = {
+  gamenerdz: "Game Nerdz",
+  miniaturemarket: "Miniature Market",
+  nobleknight: "Noble Knight",
+};
+
+const STORE_OPTIONS: Array<{ id: StoreId; label: string }> = (
+  Object.keys(STORE_LABELS) as StoreId[]
+).map((id) => ({ id, label: STORE_LABELS[id] }));
+
+const CONDITION_KIND_LABELS: Record<ConditionKind, string> = {
+  new: "Nuevo",
+  sealed: "Sellado",
+  used: "Usado",
+};
+
+const CONDITION_KIND_CLASSES: Record<ConditionKind, string> = {
+  new: "border-accent-secondary/60 text-accent-secondary",
+  sealed: "border-border text-ink-soft",
+  used: "border-accent/60 text-accent",
+};
+
+const NK_GRADE_HELP =
+  "Grados Noble Knight: SW = sellado (entre paréntesis el estado de la caja), MINT/New = nuevo, NM = casi nuevo, EX = excelente, VG = muy bueno, Fair = muy usado. «A/B» = caja/contenido.";
 
 function formatPrice(offer: ScoredStoreOffer): string {
   if (offer.price == null) return "—";
   return `$${offer.price.toFixed(2)} ${offer.currency}`;
+}
+
+function ConditionChip({
+  kind,
+  condition,
+}: {
+  kind: ConditionKind;
+  condition: string;
+}) {
+  return (
+    <span
+      title={NK_GRADE_HELP}
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium ${CONDITION_KIND_CLASSES[kind]}`}
+    >
+      {CONDITION_KIND_LABELS[kind]}
+      <span className="font-normal text-ink-soft">{condition}</span>
+    </span>
+  );
+}
+
+/** Other in-stock graded copies besides the one behind the headline price. */
+function OtherCopies({ offer }: { offer: ScoredStoreOffer }) {
+  const others = (offer.variants ?? []).slice(1);
+  if (others.length === 0) return null;
+  return (
+    <div className="mt-1.5">
+      <p className="text-xs text-muted-dim">Otras copias</p>
+      <ul className="mt-1 flex flex-wrap gap-1.5">
+        {others.map((v, i) => (
+          <li
+            key={`${v.condition}-${v.price}-${i}`}
+            className="flex items-center gap-1 text-xs text-muted"
+          >
+            <ConditionChip kind={v.conditionKind} condition={v.condition} />
+            <span className="tabular-nums text-ink-soft">
+              ${v.price.toFixed(2)}
+            </span>
+            {v.quantity != null && v.quantity > 1 ? (
+              <span className="text-muted-dim">×{v.quantity}</span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function stockLabel(inStock: boolean | null): string {
@@ -37,10 +103,9 @@ function wishlistPriorityLabel(priority: number | null | undefined): string | nu
 }
 
 export function WishlistStoreMatchActivity() {
-  const [stores, setStores] = useState<StoreId[]>([
-    "gamenerdz",
-    "miniaturemarket",
-  ]);
+  const [stores, setStores] = useState<StoreId[]>(
+    STORE_OPTIONS.map((opt) => opt.id),
+  );
   const [inStockOnly, setInStockOnly] = useState(true);
   const [maxItems, setMaxItems] = useState(20);
   const [forceRefresh, setForceRefresh] = useState(false);
@@ -84,8 +149,10 @@ export function WishlistStoreMatchActivity() {
           Wishlist × tiendas
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Busca en vivo cada juego de tu wishlist en Game Nerdz y Miniature
-          Market. Uso personal: rate limit + caché ~24h. Los resultados pueden
+          Busca en vivo cada juego de tu wishlist en Game Nerdz, Miniature
+          Market y Noble Knight. Noble Knight vende copias usadas graduadas: se
+          muestra la condición de cada copia y el precio es el de la más barata.
+          Uso personal: rate limit + caché ~24h. Los resultados pueden
           desactualizarse.
         </p>
       </div>
@@ -221,12 +288,18 @@ export function WishlistStoreMatchActivity() {
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="font-medium text-accent">
-                              {offer.store === "gamenerdz"
-                                ? "Game Nerdz"
-                                : "Miniature Market"}
+                              {STORE_LABELS[offer.store] ?? offer.store}
                             </span>
-                            <span className="tabular-nums text-ink">
-                              {formatPrice(offer)}
+                            <span className="flex items-center gap-2">
+                              {offer.condition && offer.conditionKind ? (
+                                <ConditionChip
+                                  kind={offer.conditionKind}
+                                  condition={offer.condition}
+                                />
+                              ) : null}
+                              <span className="tabular-nums text-ink">
+                                {formatPrice(offer)}
+                              </span>
                             </span>
                           </div>
                           <p className="mt-0.5 truncate text-xs text-muted">
@@ -249,6 +322,7 @@ export function WishlistStoreMatchActivity() {
                               Ver en tienda
                             </a>
                           </div>
+                          <OtherCopies offer={offer} />
                         </li>
                       ))}
                     </ul>
@@ -275,9 +349,11 @@ export function WishlistStoreMatchActivity() {
                     <ul className="mt-1 space-y-1 text-xs text-muted">
                       {item.candidates.map((c) => (
                         <li key={`${c.store}-${c.url}`}>
-                          [{c.store}] {c.name}
+                          [{STORE_LABELS[c.store] ?? c.store}] {c.name}
                           {c.publisher ? ` (${c.publisher})` : ""} —{" "}
-                          {formatPrice(c)} ({(c.score * 100).toFixed(0)}%){" "}
+                          {formatPrice(c)}
+                          {c.condition ? ` ${c.condition}` : ""} (
+                          {(c.score * 100).toFixed(0)}%){" "}
                           <a
                             href={c.url}
                             target="_blank"

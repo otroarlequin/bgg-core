@@ -8,15 +8,18 @@ import type { CollectionEntry } from "../src/domain/types.js";
 import { queryWishlistStoreMatch } from "../src/query/wishlist-store-match.js";
 import { createDatabase, createStorageService } from "../src/storage/index.js";
 import {
+  classifyNobleKnightCondition,
   parseGameNerdzSearchJson,
   parseMiniatureMarketManufacturer,
   parseMiniatureMarketSuggestHtml,
+  parseNobleKnightSearchJson,
 } from "../src/stores/parsers.js";
 import type { StoreOffer } from "../src/stores/types.js";
 import {
   TITLE_AMBIGUOUS_MIN,
   TITLE_MATCH_THRESHOLD,
   applyPublisherSignal,
+  buildFullSearchQuery,
   buildSearchQuery,
   normalizeTitle,
   scoreTitleMatch,
@@ -121,6 +124,51 @@ describe("store parsers (fixtures, offline)", () => {
     );
     expect(parseMiniatureMarketManufacturer(html)).toBe("Synapses Games");
   });
+
+  it("parses Noble Knight Zoovu JSON with graded copies", () => {
+    const raw = JSON.parse(
+      readFileSync(join(fixturesDir, "nobleknight-search.json"), "utf8"),
+    );
+    const offers = parseNobleKnightSearchJson(raw);
+    // Playmat (Dice & Supplies) is dropped; out-of-stock game is kept.
+    expect(offers.map((o) => o.name)).toEqual([
+      "Wingspan w/Swift Start Pack",
+      "Wingspan - European Expansion",
+      "Crew, The - The Quest for Planet Nine",
+    ]);
+    expect(offers[0]).toMatchObject({
+      store: "nobleknight",
+      price: 55,
+      currency: "USD",
+      url: "https://www.nobleknight.com/P/2147774550/Wingspan-w-Swift-Start-Pack",
+      sku: "STM910",
+      inStock: true,
+      publisher: "Stonemaier Games",
+      condition: "VG+/NM",
+      conditionKind: "used",
+    });
+    expect(offers[0].variants?.map((v) => [v.condition, v.price])).toEqual([
+      ["VG+/NM", 55],
+      ["SW (VG+/New)", 56.5],
+      ["SW (MINT/New)", 58.95],
+    ]);
+    expect(offers[2]).toMatchObject({
+      inStock: false,
+      price: null,
+      condition: null,
+      variants: [],
+    });
+    expect(offers.map((o) => o.lineSubProduct)).toEqual([false, true, false]);
+  });
+
+  it("classifies Noble Knight grades", () => {
+    expect(classifyNobleKnightCondition("MINT/New")).toBe("new");
+    expect(classifyNobleKnightCondition("SW (MINT/New)")).toBe("new");
+    expect(classifyNobleKnightCondition("SW (VG+/New)")).toBe("sealed");
+    expect(classifyNobleKnightCondition("VG+/NM")).toBe("used");
+    expect(classifyNobleKnightCondition("VG+/Mint")).toBe("used");
+    expect(classifyNobleKnightCondition("Fair/EX")).toBe("used");
+  });
 });
 
 describe("title-match", () => {
@@ -161,6 +209,22 @@ describe("title-match", () => {
       applyPublisherSignal(0.94, ["Synapses Games"], "Greater Than Games, LLC"),
     ).toBeLessThan(TITLE_MATCH_THRESHOLD);
     expect(applyPublisherSignal(0.94, ["Synapses Games"], null)).toBe(0.94);
+  });
+
+  it("treats ordinal words and suffixes as the same edition", () => {
+    expect(
+      scoreTitleMatch("Twilight Imperium: Fourth Edition", "Twilight Imperium (4th Edition)"),
+    ).toBe(1);
+    expect(
+      scoreTitleMatch("Twilight Imperium: Fourth Edition", "Twilight Imperium (3rd Edition)"),
+    ).toBeLessThan(TITLE_AMBIGUOUS_MIN);
+  });
+
+  it("buildFullSearchQuery keeps the subtitle", () => {
+    expect(buildFullSearchQuery("Brass: Birmingham")).toBe("Brass Birmingham");
+    expect(buildFullSearchQuery("Gloomhaven — Forgotten Circles")).toBe(
+      "Gloomhaven Forgotten Circles",
+    );
   });
 
   it("buildSearchQuery drops subtitle noise", () => {
@@ -219,6 +283,7 @@ describe("queryWishlistStoreMatch cache + match", () => {
     let mmCalls = 0;
 
     const first = await queryWishlistStoreMatch(db, {
+      stores: ["gamenerdz", "miniaturemarket"],
       maxItems: 10,
       searchers: {
         gamenerdz: async () => {
@@ -243,6 +308,7 @@ describe("queryWishlistStoreMatch cache + match", () => {
     expect(mmCalls).toBe(2);
 
     const second = await queryWishlistStoreMatch(db, {
+      stores: ["gamenerdz", "miniaturemarket"],
       maxItems: 10,
       searchers: {
         gamenerdz: async () => {
@@ -353,6 +419,7 @@ describe("queryWishlistStoreMatch cache + match", () => {
     });
 
     const result = await queryWishlistStoreMatch(db, {
+      stores: ["gamenerdz", "miniaturemarket"],
       maxItems: 10,
       forceRefresh: true,
       searchers: {
@@ -397,5 +464,79 @@ describe("queryWishlistStoreMatch cache + match", () => {
 
     expect(result.matches).toHaveLength(0);
     expect(result.noOffer + result.ambiguous.length).toBe(2);
+  });
+
+  it("keeps base games and expansions apart", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bgg-store-exp-"));
+    const db = createDatabase(join(dir, "test.db"));
+    const storage = createStorageService(db);
+
+    storage.collection.upsertCollectionEntries(storage.db, [
+      entry({ collId: 1, bggId: 1, name: "Galileo Galilei", wishlist: true }),
+      entry({
+        collId: 2,
+        bggId: 2,
+        name: "Ironwood: Steel & Spirit",
+        subtype: "boardgameexpansion",
+        wishlist: true,
+      }),
+      entry({
+        collId: 3,
+        bggId: 3,
+        name: "Wingspan: European Expansion",
+        subtype: "boardgameexpansion",
+        wishlist: true,
+      }),
+    ]);
+
+    const nkOffers: Record<string, StoreOffer[]> = {
+      galileo: [
+        offer({
+          store: "nobleknight",
+          name: "Galileo Galilei - Luna Expansion",
+          url: "https://www.nobleknight.com/P/1/Luna",
+        }),
+        offer({
+          store: "nobleknight",
+          name: "Galileo Galilei - Moons",
+          url: "https://www.nobleknight.com/P/4/Moons",
+          lineSubProduct: true,
+        }),
+      ],
+      ironwood: [
+        offer({
+          store: "nobleknight",
+          name: "Ironwood",
+          url: "https://www.nobleknight.com/P/2/Ironwood",
+        }),
+      ],
+      wingspan: [
+        offer({
+          store: "nobleknight",
+          name: "Wingspan - European Expansion",
+          url: "https://www.nobleknight.com/P/3/European-Expansion",
+          lineSubProduct: true,
+        }),
+      ],
+    };
+
+    const result = await queryWishlistStoreMatch(db, {
+      stores: ["nobleknight"],
+      maxItems: 10,
+      forceRefresh: true,
+      searchers: {
+        nobleknight: async (query) => {
+          const key = Object.keys(nkOffers).find((k) =>
+            query.toLowerCase().startsWith(k),
+          );
+          return key ? nkOffers[key] : [];
+        },
+      },
+    });
+
+    expect(result.matches.map((m) => m.name)).toEqual([
+      "Wingspan: European Expansion",
+    ]);
+    expect(result.noOffer).toBe(2);
   });
 });

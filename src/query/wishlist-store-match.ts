@@ -14,7 +14,10 @@ import {
   TITLE_AMBIGUOUS_MIN,
   TITLE_MATCH_THRESHOLD,
   applyPublisherSignal,
+  buildFullSearchQuery,
   buildSearchQuery,
+  isStrictSubTitle,
+  mentionsExpansion,
   scoreTitleMatch,
 } from "../utils/title-match.js";
 import { queryCollection } from "./collection.js";
@@ -58,6 +61,12 @@ export interface WishlistStoreMatchResult {
   ambiguous: WishlistStoreAmbiguousItem[];
   noOffer: number;
   errors: StoreSearchError[];
+}
+
+function searchQueryFor(store: StoreId, gameName: string): string {
+  return store === "nobleknight"
+    ? buildFullSearchQuery(gameName)
+    : buildSearchQuery(gameName);
 }
 
 function pickStores(requested?: StoreId[]): StoreId[] {
@@ -115,12 +124,13 @@ export async function queryWishlistStoreMatch(
   let noOffer = 0;
 
   for (const item of wishlist) {
-    const query = buildSearchQuery(item.name);
-    const queryKey = query.toLowerCase();
     const scored: ScoredStoreOffer[] = [];
     const bggPublishers = item.gamePublishers ?? [];
+    const isExpansion = item.subtype === "boardgameexpansion";
 
     for (const store of stores) {
+      const query = searchQueryFor(store, item.name);
+      const queryKey = query.toLowerCase();
       let offers: StoreOffer[] | null = null;
 
       if (!forceRefresh) {
@@ -147,6 +157,16 @@ export async function queryWishlistStoreMatch(
       }
 
       for (const offer of filterOffers(offers, inStockOnly)) {
+        // A base game is never one of its line's sub-products, and an
+        // expansion is never the bare base game title.
+        if (
+          !isExpansion &&
+          (offer.lineSubProduct ||
+            (mentionsExpansion(offer.name) && !mentionsExpansion(item.name)))
+        ) {
+          continue;
+        }
+        if (isExpansion && isStrictSubTitle(item.name, offer.name)) continue;
         const titleScore = scoreTitleMatch(item.name, offer.name);
         const score = applyPublisherSignal(
           titleScore,

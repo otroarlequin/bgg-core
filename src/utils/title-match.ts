@@ -29,9 +29,32 @@ export function normalizeTitle(text: string): string {
     .trim();
 }
 
+const ORDINAL_WORDS: Record<string, string> = {
+  first: "1",
+  second: "2",
+  third: "3",
+  fourth: "4",
+  fifth: "5",
+  sixth: "6",
+  seventh: "7",
+  eighth: "8",
+  ninth: "9",
+  tenth: "10",
+};
+
+/** "Fourth" and "4th" both become "4" so edition checks compare like with like. */
+function normalizeOrdinal(token: string): string {
+  const suffixed = token.match(/^(\d+)(st|nd|rd|th)$/);
+  if (suffixed) return suffixed[1];
+  return ORDINAL_WORDS[token] ?? token;
+}
+
 /** Keep noise-filtered tokens; preserve numeric edition markers (1, 2, 10). */
 export function titleTokens(text: string, dropNoise = true): string[] {
-  const tokens = normalizeTitle(text).split(" ").filter(Boolean);
+  const tokens = normalizeTitle(text)
+    .split(" ")
+    .filter(Boolean)
+    .map(normalizeOrdinal);
   if (!dropNoise) return tokens;
   const filtered = tokens.filter(
     (t) => !NOISE_TOKENS.has(t) && (t.length > 1 || /^\d+$/.test(t)),
@@ -117,6 +140,25 @@ export function scoreTitleMatch(wishlistName: string, offerName: string): number
   return Math.min(1, score);
 }
 
+/**
+ * True when the offer title is only part of the wishlist title, e.g. offer
+ * "Ironwood" for wishlist expansion "Ironwood: Steel & Spirit".
+ */
+export function isStrictSubTitle(wishlistName: string, offerName: string): boolean {
+  const tokensA = titleTokens(wishlistName);
+  const tokensB = titleTokens(offerName);
+  return (
+    tokensB.length > 0 &&
+    tokensB.length < tokensA.length &&
+    tokensB.every((t) => tokensA.includes(t))
+  );
+}
+
+/** "expansion" is a noise token for scoring, so check it on the raw title. */
+export function mentionsExpansion(name: string): boolean {
+  return /\b(expansion|exp)\b/.test(normalizeTitle(name));
+}
+
 /** Normalize publisher / manufacturer names for comparison. */
 export function normalizePublisher(text: string): string {
   return normalizeTitle(text)
@@ -167,4 +209,12 @@ export function buildSearchQuery(gameName: string): string {
   // Drop subtitle after colon/emdash for cleaner store search
   const base = gameName.split(/[:–—]/)[0]?.trim() || gameName;
   return base.slice(0, 80);
+}
+
+/**
+ * Keep the subtitle: catalogs that mix accessories with games (Noble Knight)
+ * bury "Brass: Birmingham" under paints named "Brass" without it.
+ */
+export function buildFullSearchQuery(gameName: string): string {
+  return gameName.replace(/[:–—]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
 }
