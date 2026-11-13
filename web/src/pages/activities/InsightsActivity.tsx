@@ -80,7 +80,7 @@ function Mosaic({ items }: { items: InsightsTop100Item[] }) {
             }`}
           >
             {item.thumbnailUrl ? (
-              <img
+              <img loading="lazy"
                 src={item.thumbnailUrl}
                 alt=""
                 className="h-full w-full object-cover"
@@ -251,7 +251,7 @@ export function InsightsActivity() {
                       className="flex items-center gap-3 rounded-lg border border-border bg-surface-card px-3 py-2"
                     >
                       {item.thumbnailUrl ? (
-                        <img
+                        <img loading="lazy"
                           src={item.thumbnailUrl}
                           alt=""
                           className="h-10 w-10 rounded-md object-cover"

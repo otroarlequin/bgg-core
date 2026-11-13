@@ -19,7 +19,7 @@ function CandidateCard({
   return (
     <div className="flex h-full min-h-[28rem] flex-1 flex-col rounded-2xl border border-border bg-surface-raised/80 p-5 shadow-sm shadow-black/15">
       <div className="relative mx-auto">
-        <img
+        <img loading="lazy"
           src={
             candidate.imageUrl ??
             candidate.thumbnailUrl ??

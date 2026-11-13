@@ -29,6 +29,7 @@ import type {
   SyncApiResult,
   AppSettings,
   UpdateSettingsResult,
+  BggSearchHit,
 } from "./types";
 
 import { isProfileAppMode } from "../appMode";
@@ -142,6 +143,13 @@ export function fetchPlayStats(
   params: PlaysQueryParams = {},
 ): Promise<PlayStats> {
   return fetchJson(`/api/plays/stats${toQuery(params)}`);
+}
+
+export function searchBgg(
+  q: string,
+  signal?: AbortSignal,
+): Promise<{ items: BggSearchHit[] }> {
+  return fetchJson(`/api/bgg/search${toQuery({ q })}`, { signal });
 }
 
 export function postDuelAction(body: {

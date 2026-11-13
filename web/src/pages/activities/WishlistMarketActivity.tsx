@@ -567,7 +567,7 @@ export function WishlistMarketActivity() {
                   >
                     <div className="flex gap-3">
                       {item.thumbnailUrl ? (
-                        <img
+                        <img loading="lazy"
                           src={item.thumbnailUrl}
                           alt=""
                           className="h-14 w-14 rounded-lg object-cover"

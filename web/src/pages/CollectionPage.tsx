@@ -4,6 +4,7 @@ import type { CollectionQueryParams } from "../api/types";
 import { CollapsiblePanel } from "../components/CollapsiblePanel";
 import { CollectionFilters } from "../components/CollectionFilters";
 import { GameCard } from "../components/GameCard";
+import { CollectionGridSkeleton } from "../components/Skeleton";
 
 interface CollectionPageProps {
   filters: CollectionQueryParams;
@@ -39,7 +40,6 @@ export function CollectionPage({ filters, onChangeFilters }: CollectionPageProps
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-h-5">
-          {isLoading ? <p className="text-muted">Buscando...</p> : null}
           {isFetching && !isLoading ? (
             <p className="text-xs text-muted-dim">Actualizando...</p>
           ) : null}
@@ -73,7 +73,9 @@ export function CollectionPage({ filters, onChangeFilters }: CollectionPageProps
         </p>
       ) : null}
 
-      {data ? (
+      {isLoading ? <CollectionGridSkeleton /> : null}
+
+      {data && !isLoading ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {data.items.map((item) => (
             <GameCard

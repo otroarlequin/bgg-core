@@ -21,7 +21,7 @@ function SuggestionCard({
     <article className="flex h-full flex-col rounded-xl border border-border bg-surface-raised/50 p-3">
       <div className="flex gap-2.5">
         {item.thumbnailUrl ? (
-          <img
+          <img loading="lazy"
             src={item.thumbnailUrl}
             alt=""
             className="h-12 w-12 shrink-0 rounded-lg object-cover"
@@ -254,7 +254,7 @@ export function HotnessScoutActivity({
           <>
             <div className="flex gap-3 rounded-xl border border-border bg-surface-card/80 p-3">
               {validatorModal.thumbnailUrl ? (
-                <img
+                <img loading="lazy"
                   src={validatorModal.thumbnailUrl}
                   alt=""
                   className="h-16 w-16 shrink-0 rounded-lg object-cover"

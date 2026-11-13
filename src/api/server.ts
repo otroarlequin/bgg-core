@@ -3,6 +3,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { existsSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { Hono } from "hono";
+import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { sharedPasswordAuth } from "./auth.js";
 import { summaryRoutes } from "./routes/summary.js";
@@ -27,6 +28,7 @@ const serveWeb = existsSync(join(webRoot, "index.html"));
 
 const app = new Hono();
 
+app.use("*", compress());
 app.use("*", sharedPasswordAuth());
 
 app.use(

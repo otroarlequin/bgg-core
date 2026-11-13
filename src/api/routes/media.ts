@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { fetchWithTimeout } from "../../bgg/http.js";
 
 export const mediaRoutes = new Hono();
 
@@ -32,7 +33,7 @@ mediaRoutes.get("/proxy", async (c) => {
   }
 
   try {
-    const upstream = await fetch(raw, {
+    const upstream = await fetchWithTimeout(raw, {
       headers: {
         Accept: "image/*,*/*;q=0.8",
         "User-Agent": "bgg-core-export/0.1",

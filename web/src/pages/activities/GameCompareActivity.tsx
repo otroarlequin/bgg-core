@@ -1,5 +1,10 @@
-import { useState, type FormEvent } from "react";
-import { postGameCompare } from "../../api/client";
+import { useEffect, useState, type FormEvent } from "react";
+import { postGameCompare, searchBgg } from "../../api/client";
+import {
+  SEARCH_DEBOUNCE_MS,
+  shouldTypeaheadBggQuery,
+  useDebouncedValue,
+} from "../../hooks/useDebouncedValue";
 import type {
   BggSearchHit,
   CompareGameColumn,
@@ -40,7 +45,7 @@ function GameHeaderCell({
   return (
     <div className="flex w-full flex-col items-center gap-2 px-2 py-2">
       <div className="relative shrink-0">
-        <img
+        <img loading="lazy"
           src={
             game.thumbnailUrl ??
             game.imageUrl ??
@@ -83,6 +88,41 @@ export function GameCompareActivity() {
   const [input, setInput] = useState("");
   const [searchResults, setSearchResults] = useState<BggSearchHit[]>([]);
   const [resolving, setResolving] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestHint, setSuggestHint] = useState<string | null>(null);
+  const debouncedInput = useDebouncedValue(input, SEARCH_DEBOUNCE_MS);
+
+  useEffect(() => {
+    if (!addOpen || !shouldTypeaheadBggQuery(debouncedInput)) {
+      if (!addOpen) setSuggestHint(null);
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    setSuggesting(true);
+    void (async () => {
+      try {
+        const { items } = await searchBgg(debouncedInput.trim(), controller.signal);
+        if (cancelled) return;
+        setSearchResults(items);
+        setSuggestHint(
+          items.length === 0 ? "Sin resultados para esa búsqueda." : null,
+        );
+      } catch (err) {
+        if (cancelled || controller.signal.aborted) return;
+        setSuggestHint(
+          err instanceof Error ? err.message : "Error al buscar",
+        );
+      } finally {
+        if (!cancelled) setSuggesting(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      controller.abort();
+      setSuggesting(false);
+    };
+  }, [debouncedInput, addOpen]);
 
   const canAdd = bggIds.length < MAX_COMPARE_SLOTS;
   const games = compare?.games ?? [];
@@ -374,6 +414,12 @@ export function GameCompareActivity() {
             autoFocus
           />
         </form>
+        {suggesting ? (
+          <p className="mt-2 text-xs text-muted-dim">Buscando sugerencias…</p>
+        ) : null}
+        {suggestHint && !suggesting ? (
+          <p className="mt-2 text-xs text-muted">{suggestHint}</p>
+        ) : null}
         {searchResults.length > 0 ? (
           <ul className="mt-4 max-h-64 divide-y divide-border overflow-y-auto rounded-lg border border-border">
             {searchResults.map((hit) => (
