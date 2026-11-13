@@ -96,6 +96,19 @@ export function getDistinctCollectionBggIds(db: Db): number[] {
   return rows.map((r) => r.bgg_id);
 }
 
+/** True when collection XML names were stored as the mapper placeholder. */
+export function hasPlaceholderCollectionNames(db: Db): boolean {
+  const row = db
+    .prepare(
+      `SELECT 1 AS ok
+       FROM collection_entries
+       WHERE name = 'Unknown' OR trim(name) = ''
+       LIMIT 1`,
+    )
+    .get() as { ok: number } | undefined;
+  return Boolean(row);
+}
+
 /** IDs needed for a useful profile session (owned + shortlist flags). */
 export function getProfilePriorityBggIds(db: Db): number[] {
   const rows = db

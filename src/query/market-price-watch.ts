@@ -1,5 +1,6 @@
 import type { MarketFetchFn, MarketListing } from "../bgg/marketplace.js";
 import type { Db } from "../storage/database.js";
+import { SQL_RESOLVED_GAME_NAME } from "../storage/sql-utils.js";
 import { insertMarketAlertIfNew } from "../storage/repos/market-alerts.js";
 import {
   type MarketPriceWatch,
@@ -81,7 +82,7 @@ export function resolveGameDisplayName(
 ): string {
   const row = db
     .prepare(
-      `SELECT COALESCE(g.name, ce.name) AS name
+      `SELECT ${SQL_RESOLVED_GAME_NAME} AS name
        FROM collection_entries ce
        LEFT JOIN games g ON g.bgg_id = ce.bgg_id
        WHERE ce.bgg_id = ?
