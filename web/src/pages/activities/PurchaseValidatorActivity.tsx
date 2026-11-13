@@ -1,5 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { postPurchaseValidator } from "../../api/client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { postPurchaseValidator, searchBgg } from "../../api/client";
+import {
+  SEARCH_DEBOUNCE_MS,
+  shouldTypeaheadBggQuery,
+  useDebouncedValue,
+} from "../../hooks/useDebouncedValue";
 import type {
   BggSearchHit,
   CandidateGameView,
@@ -186,7 +191,7 @@ function MatchesTable({ items }: { items: MatchGameRow[] }) {
           >
             <div className="flex gap-3">
               <div className="relative shrink-0">
-                <img
+                <img loading="lazy"
                   src={
                     item.thumbnailUrl ??
                     "https://placehold.co/40x40/2a241c/a89880?text=BGG"
@@ -247,7 +252,7 @@ function MatchesTable({ items }: { items: MatchGameRow[] }) {
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     <div className="relative shrink-0">
-                      <img
+                      <img loading="lazy"
                         src={
                           item.thumbnailUrl ??
                           "https://placehold.co/40x40/2a241c/a89880?text=BGG"
@@ -327,7 +332,7 @@ function CandidatePanel({
         <div className="flex min-w-0 flex-col gap-3">
           <div className="flex gap-3">
             <div className="relative shrink-0">
-              <img
+              <img loading="lazy"
                 src={
                   candidate.imageUrl ??
                   candidate.thumbnailUrl ??
@@ -476,6 +481,11 @@ export function PurchaseValidatorActivity({
   const [filterWishlist, setFilterWishlist] = useState(false);
   const [filterPreordered, setFilterPreordered] = useState(false);
   const [includeExpansions, setIncludeExpansions] = useState(true);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestHint, setSuggestHint] = useState<string | null>(null);
+  const debouncedInput = useDebouncedValue(input, SEARCH_DEBOUNCE_MS);
+  const stepRef = useRef(step);
+  stepRef.current = step;
 
   function universeFilterBody() {
     return {
@@ -494,6 +504,42 @@ export function PurchaseValidatorActivity({
     // Intentionally only when a new seed arrives from another activity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialBggId]);
+
+  useEffect(() => {
+    if (stepRef.current === "analysis") return;
+    if (!shouldTypeaheadBggQuery(debouncedInput)) {
+      setSuggestHint(null);
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    setSuggesting(true);
+    void (async () => {
+      try {
+        const { items } = await searchBgg(debouncedInput.trim(), controller.signal);
+        if (cancelled) return;
+        setSearchResults(items);
+        if (items.length > 0) {
+          setStep("search");
+          setSuggestHint(null);
+        } else {
+          setSuggestHint("Sin resultados para esa búsqueda.");
+        }
+      } catch (err) {
+        if (cancelled || controller.signal.aborted) return;
+        setSuggestHint(
+          err instanceof Error ? err.message : "Error al buscar",
+        );
+      } finally {
+        if (!cancelled) setSuggesting(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      controller.abort();
+      setSuggesting(false);
+    };
+  }, [debouncedInput]);
 
   async function analyzeBggId(bggId: number, options?: { keepStatus?: boolean }) {
     setLoading(true);
@@ -725,6 +771,12 @@ export function PurchaseValidatorActivity({
               if (e.key === "Enter") void handleResolve();
             }}
           />
+          {suggesting ? (
+            <p className="mt-2 text-xs text-muted-dim">Buscando sugerencias…</p>
+          ) : null}
+          {suggestHint && !suggesting ? (
+            <p className="mt-2 text-xs text-muted">{suggestHint}</p>
+          ) : null}
           <button
             type="button"
             disabled={loading || !input.trim()}

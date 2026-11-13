@@ -161,7 +161,7 @@ export function GameCard({
         className={`overflow-hidden rounded-2xl border text-left shadow-sm shadow-black/20 ${frameClass}`}
       >
         <div className="relative aspect-square w-full bg-surface-raised sm:aspect-[4/3]">
-          <img src={cover} alt={name} className="h-full w-full object-cover" />
+          <img loading="lazy" src={cover} alt={name} className="h-full w-full object-cover" />
           <div className="absolute right-3 top-3">
             <BggLink
               bggId={bggId}
@@ -286,7 +286,7 @@ export function GameCard({
       className={`flex gap-4 overflow-hidden rounded-xl border p-3.5 shadow-sm shadow-black/20 ${frameClass}`}
     >
       <div className="relative shrink-0">
-        <img
+        <img loading="lazy"
           src={cover}
           alt={name}
           className="h-28 w-28 rounded-lg object-cover bg-surface-raised sm:h-32 sm:w-32"

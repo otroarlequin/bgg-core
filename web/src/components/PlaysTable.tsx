@@ -70,7 +70,7 @@ export function PlaysTable({ items }: PlaysTableProps) {
                 }`}
               >
                 <div className="flex gap-3">
-                  <img
+                  <img loading="lazy"
                     src={
                       play.thumbnailUrl ??
                       "https://placehold.co/40x40/2a241c/a89880?text=BGG"
@@ -160,7 +160,7 @@ export function PlaysTable({ items }: PlaysTableProps) {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <img
+                        <img loading="lazy"
                           src={
                             play.thumbnailUrl ??
                             "https://placehold.co/40x40/2a241c/a89880?text=BGG"

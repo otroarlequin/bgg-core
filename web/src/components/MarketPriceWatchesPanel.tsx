@@ -74,7 +74,7 @@ function WatchGameCard({
       } ${onSelect ? "" : "cursor-default"}`}
     >
       {thumbnailUrl ? (
-        <img
+        <img loading="lazy"
           src={thumbnailUrl}
           alt=""
           className="h-12 w-12 shrink-0 rounded-md object-cover"
@@ -272,7 +272,7 @@ export function MarketPriceWatchesPanel({
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       {watch.thumbnailUrl ? (
-                        <img
+                        <img loading="lazy"
                           src={watch.thumbnailUrl}
                           alt=""
                           className="h-10 w-10 shrink-0 rounded-md object-cover"

@@ -230,7 +230,7 @@ export function ShelfOfShameActivity() {
               >
                 <div className="aspect-square bg-surface-raised">
                   {item.thumbnailUrl || item.imageUrl ? (
-                    <img
+                    <img loading="lazy"
                       src={item.imageUrl ?? item.thumbnailUrl ?? ""}
                       alt=""
                       className="h-full w-full object-cover"

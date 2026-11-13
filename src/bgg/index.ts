@@ -1,5 +1,11 @@
-export { createBggClient } from "./client.js";
+export { createBggClient, BGG_FETCH_TIMEOUT_MS } from "./client.js";
 export type { BggClient } from "./client.js";
+export {
+  fetchWithTimeout,
+  installBggFetchTimeout,
+  isAbortError,
+  isBggRequest,
+} from "./http.js";
 export {
   chunkArray,
   formatModifiedSince,

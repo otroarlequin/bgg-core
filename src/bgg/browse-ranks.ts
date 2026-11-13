@@ -1,4 +1,5 @@
 import { decodeHtmlEntities } from "../utils/html-entities.js";
+import { fetchWithTimeout } from "./http.js";
 
 export interface BrowseRankItem {
   rank: number;
@@ -19,7 +20,7 @@ function browseUrl(page: number): string {
 }
 
 export async function defaultFetchBrowsePage(page: number): Promise<string> {
-  const res = await fetch(browseUrl(page), {
+  const res = await fetchWithTimeout(browseUrl(page), {
     headers: {
       "User-Agent": BROWSE_UA,
       Accept: "text/html",

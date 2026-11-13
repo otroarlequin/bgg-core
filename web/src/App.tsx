@@ -1,20 +1,32 @@
-import { useState } from "react";
-import { SummaryPage } from "./pages/SummaryPage";
-import { CollectionPage } from "./pages/CollectionPage";
-import { PlaysPage } from "./pages/PlaysPage";
-import {
-  ActivitiesPage,
-  type ActivitiesFocus,
-} from "./pages/ActivitiesPage";
-import { CommandsPage } from "./pages/CommandsPage";
-import { SettingsPage } from "./pages/SettingsPage";
+import { lazy, Suspense, useState } from "react";
 import { MarketAlertsBell } from "./components/MarketAlertsBell";
+import { PageSkeleton } from "./components/Skeleton";
 import type { CollectionQueryParams } from "./api/types";
 import type { AppMode } from "./appMode";
 import {
   type CollectionPreset,
   collectionFiltersFromPreset,
 } from "./collectionPresets";
+import type { ActivitiesFocus } from "./pages/ActivitiesPage";
+
+const SummaryPage = lazy(() =>
+  import("./pages/SummaryPage").then((m) => ({ default: m.SummaryPage })),
+);
+const CollectionPage = lazy(() =>
+  import("./pages/CollectionPage").then((m) => ({ default: m.CollectionPage })),
+);
+const PlaysPage = lazy(() =>
+  import("./pages/PlaysPage").then((m) => ({ default: m.PlaysPage })),
+);
+const ActivitiesPage = lazy(() =>
+  import("./pages/ActivitiesPage").then((m) => ({ default: m.ActivitiesPage })),
+);
+const CommandsPage = lazy(() =>
+  import("./pages/CommandsPage").then((m) => ({ default: m.CommandsPage })),
+);
+const SettingsPage = lazy(() =>
+  import("./pages/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+);
 
 type TabId =
   | "summary"
@@ -137,21 +149,26 @@ export default function App({ mode = "personal" }: { mode?: AppMode }) {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6">
-        {activeTab === "summary" ? (
-          <SummaryPage onNavigateToCollection={goToCollection} />
-        ) : null}
-        {activeTab === "collection" ? (
-          <CollectionPage filters={collectionFilters} onChangeFilters={setCollectionFilters} />
-        ) : null}
-        {activeTab === "plays" ? <PlaysPage /> : null}
-        {activeTab === "activities" ? (
-          <ActivitiesPage
-            initialFocus={activitiesFocus}
-            onConsumedInitialFocus={() => setActivitiesFocus(null)}
-          />
-        ) : null}
-        {activeTab === "commands" && commandsVisible ? <CommandsPage /> : null}
-        {activeTab === "settings" ? <SettingsPage mode={mode} /> : null}
+        <Suspense fallback={<PageSkeleton />}>
+          {activeTab === "summary" ? (
+            <SummaryPage onNavigateToCollection={goToCollection} />
+          ) : null}
+          {activeTab === "collection" ? (
+            <CollectionPage
+              filters={collectionFilters}
+              onChangeFilters={setCollectionFilters}
+            />
+          ) : null}
+          {activeTab === "plays" ? <PlaysPage /> : null}
+          {activeTab === "activities" ? (
+            <ActivitiesPage
+              initialFocus={activitiesFocus}
+              onConsumedInitialFocus={() => setActivitiesFocus(null)}
+            />
+          ) : null}
+          {activeTab === "commands" && commandsVisible ? <CommandsPage /> : null}
+          {activeTab === "settings" ? <SettingsPage mode={mode} /> : null}
+        </Suspense>
       </main>
     </div>
   );

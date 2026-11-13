@@ -5,6 +5,7 @@ import type { PlaysQueryParams } from "../api/types";
 import { CollapsiblePanel } from "../components/CollapsiblePanel";
 import { PlaysTable } from "../components/PlaysTable";
 import { StatCard } from "../components/StatCard";
+import { PlaysTableSkeleton, StatCardsSkeleton } from "../components/Skeleton";
 
 export function PlaysPage() {
   const [filters, setFilters] = useState<PlaysQueryParams>({});
@@ -56,6 +57,7 @@ export function PlaysPage() {
         </button>
       </div>
 
+      {statsQuery.isLoading ? <StatCardsSkeleton /> : null}
       {statsQuery.data ? (
         <CollapsiblePanel
           title="Resumen"
@@ -82,13 +84,13 @@ export function PlaysPage() {
         </CollapsiblePanel>
       ) : null}
 
-      {isLoading ? <p className="text-muted">Cargando partidas...</p> : null}
+      {isLoading ? <PlaysTableSkeleton /> : null}
       {error ? (
         <p className="rounded-xl border border-red-900 bg-red-950/40 p-4 text-red-200">
           Error al cargar partidas.
         </p>
       ) : null}
-      {data ? <PlaysTable items={data.items} /> : null}
+      {data && !isLoading ? <PlaysTable items={data.items} /> : null}
     </div>
   );
 }

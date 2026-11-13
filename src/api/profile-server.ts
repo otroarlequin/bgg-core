@@ -3,6 +3,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { existsSync, mkdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { Hono } from "hono";
+import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { getCookie, deleteCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
@@ -38,6 +39,7 @@ const serveWeb = existsSync(join(webRoot, "index.html"));
 
 const app = new Hono();
 
+app.use("*", compress());
 app.use(
   "/api/*",
   cors({

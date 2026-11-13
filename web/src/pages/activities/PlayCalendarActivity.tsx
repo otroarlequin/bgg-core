@@ -489,7 +489,7 @@ export function PlayCalendarActivity() {
                                 : "bg-surface/40"
                             }`}
                           >
-                            <img
+                            <img loading="lazy"
                               src={
                                 play.thumbnailUrl ??
                                 "https://placehold.co/40x40/2a241c/a89880?text=BGG"
