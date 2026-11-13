@@ -1,5 +1,6 @@
 import type { BrowseRankItem } from "../bgg/browse-ranks.js";
 import type { Db } from "../storage/database.js";
+import { SQL_RESOLVED_GAME_NAME } from "../storage/sql-utils.js";
 import { getStoredBggUsername } from "../storage/repos/app-settings.js";
 import {
   listCollectionStatusEvents,
@@ -465,7 +466,7 @@ export function queryInsights(
     .prepare(
       `SELECT
          ce.bgg_id,
-         COALESCE(g.name, ce.name) AS name,
+         ${SQL_RESOLVED_GAME_NAME} AS name,
          COALESCE(g.thumbnail_url, ce.thumbnail_url) AS thumbnail_url
        FROM collection_entries ce
        LEFT JOIN games g ON g.bgg_id = ce.bgg_id`,

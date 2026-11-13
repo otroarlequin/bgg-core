@@ -1,5 +1,6 @@
 import type { Game } from "../domain/types.js";
 import type { Db } from "../storage/database.js";
+import { SQL_RESOLVED_GAME_NAME } from "../storage/sql-utils.js";
 import {
   decodeHtmlEntities,
   decodeHtmlEntitiesList,
@@ -169,7 +170,7 @@ function loadUniverse(db: Db): UniverseRow[] {
     .prepare(
       `SELECT
          ce.bgg_id,
-         COALESCE(g.name, ce.name) AS name,
+         ${SQL_RESOLVED_GAME_NAME} AS name,
          ce.subtype,
          COALESCE(g.thumbnail_url, ce.thumbnail_url) AS thumbnail_url,
          ce.personal_rating,

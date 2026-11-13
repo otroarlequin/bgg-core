@@ -157,19 +157,43 @@ function toFloat(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function getPrimaryName(names: unknown): string {
-  if (!names) return "Unknown";
-  if (typeof names === "string") return decodeHtmlEntities(names);
-  if (typeof names === "object" && names !== null && "value" in names && !Array.isArray(names)) {
-    return decodeHtmlEntities(String((names as BggName).value));
+/**
+ * Thing XML: `<name type="primary" value="Catan"/>` → `{ type, value }`.
+ * Collection XML: `<name sortindex="1">Catan</name>` → `{ sortindex, #text }`
+ * (fast-xml-parser / bgg-api-ts). Looking only at `.value` stored "Unknown".
+ */
+function scalarName(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (typeof value === "object") return "";
+  return decodeHtmlEntities(value).trim();
+}
+
+function nameFromNode(node: unknown): string {
+  if (node == null) return "";
+  if (typeof node === "string" || typeof node === "number" || typeof node === "boolean") {
+    return decodeHtmlEntities(node).trim();
   }
-  const list = Array.isArray(names) ? names : [names];
-  if (list.length === 0) return "Unknown";
-  const primary = list.find(
-    (n) => typeof n === "object" && n !== null && (n as BggName).type === "primary",
-  ) as BggName | undefined;
-  const first = list[0] as BggName | undefined;
-  return decodeHtmlEntities(primary?.value ?? first?.value ?? "Unknown");
+  if (typeof node !== "object" || Array.isArray(node)) return "";
+  const obj = node as Record<string, unknown>;
+  return (
+    scalarName(obj.value) ||
+    scalarName(obj["#text"]) ||
+    scalarName(obj._) ||
+    scalarName(obj.text) ||
+    scalarName(obj._text)
+  );
+}
+
+function getPrimaryName(names: unknown): string {
+  if (names == null) return "Unknown";
+  if (Array.isArray(names)) {
+    if (names.length === 0) return "Unknown";
+    const primary = names.find(
+      (n) => typeof n === "object" && n !== null && (n as BggName).type === "primary",
+    );
+    return nameFromNode(primary) || nameFromNode(names[0]) || "Unknown";
+  }
+  return nameFromNode(names) || "Unknown";
 }
 
 function extractLinkValues(

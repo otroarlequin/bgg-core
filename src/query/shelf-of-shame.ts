@@ -1,5 +1,6 @@
 import type { GameSubtype } from "../domain/types.js";
 import type { Db } from "../storage/database.js";
+import { SQL_RESOLVED_GAME_NAME } from "../storage/sql-utils.js";
 import { decodeHtmlEntities } from "../utils/html-entities.js";
 
 export interface ShelfOfShameParams {
@@ -90,7 +91,7 @@ export function queryShelfOfShame(
     .prepare(
       `SELECT
          ce.bgg_id,
-         COALESCE(g.name, ce.name) AS name,
+         ${SQL_RESOLVED_GAME_NAME} AS name,
          ce.subtype,
          ce.year_published,
          COALESCE(g.thumbnail_url, ce.thumbnail_url) AS thumbnail_url,
@@ -107,7 +108,7 @@ export function queryShelfOfShame(
          ce.last_modified ASC,
          CASE WHEN ce.year_published IS NULL THEN 1 ELSE 0 END,
          ce.year_published ASC,
-         COALESCE(g.name, ce.name) COLLATE NOCASE ASC
+         ${SQL_RESOLVED_GAME_NAME} COLLATE NOCASE ASC
        ${limitClause}`,
     )
     .all(...(values as Array<string | number>)) as Array<{

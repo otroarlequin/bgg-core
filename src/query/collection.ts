@@ -1,6 +1,7 @@
 import type { CollectionQueryResult, GameSubtype } from "../domain/types.js";
 import { BGG_LANGUAGE_DEPENDENCE_LEVELS } from "../domain/language-dependence.js";
 import type { Db } from "../storage/database.js";
+import { SQL_RESOLVED_GAME_NAME } from "../storage/sql-utils.js";
 import {
   decodeHtmlEntities,
   decodeHtmlEntitiesList,
@@ -233,13 +234,13 @@ export function queryCollection(
   const { conditions, values } = buildCollectionConditions(params);
 
   const sortMap = {
-    name: "COALESCE(g.name, ce.name) COLLATE NOCASE ASC",
+    name: `${SQL_RESOLVED_GAME_NAME} COLLATE NOCASE ASC`,
     rating:
-      "ce.personal_rating DESC NULLS LAST, COALESCE(g.name, ce.name) COLLATE NOCASE ASC",
+      `ce.personal_rating DESC NULLS LAST, ${SQL_RESOLVED_GAME_NAME} COLLATE NOCASE ASC`,
     plays:
-      "ce.num_plays DESC, COALESCE(g.name, ce.name) COLLATE NOCASE ASC",
+      `ce.num_plays DESC, ${SQL_RESOLVED_GAME_NAME} COLLATE NOCASE ASC`,
     weight:
-      "g.weight DESC NULLS LAST, COALESCE(g.name, ce.name) COLLATE NOCASE ASC",
+      `g.weight DESC NULLS LAST, ${SQL_RESOLVED_GAME_NAME} COLLATE NOCASE ASC`,
   } as const;
   const sortKey = params.sortBy ?? "name";
   const sortBy = sortMap[sortKey];
@@ -249,7 +250,7 @@ export function queryCollection(
   const sql = `
     SELECT
       ce.*,
-      COALESCE(g.name, ce.name) AS resolved_name,
+      ${SQL_RESOLVED_GAME_NAME} AS resolved_name,
       g.weight AS game_weight,
       g.designers AS game_designers_json,
       g.min_players AS game_min_players,

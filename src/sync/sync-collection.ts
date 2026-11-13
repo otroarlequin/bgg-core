@@ -40,8 +40,11 @@ export async function syncCollection(
   username: string,
   options: { incremental?: boolean } = {},
 ): Promise<SyncCollectionResult> {
-  const incremental = options.incremental ?? true;
+  const requestedIncremental = options.incremental ?? true;
   const previous = storage.syncState.getSyncState(storage.db, "collection");
+  const healPlaceholderNames =
+    storage.collection.hasPlaceholderCollectionNames(storage.db);
+  const incremental = requestedIncremental && !healPlaceholderNames;
 
   const baseParams: Record<string, string | boolean> = {
     stats: true,

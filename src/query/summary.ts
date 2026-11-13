@@ -1,4 +1,5 @@
 import type { Db } from "../storage/database.js";
+import { SQL_RESOLVED_GAME_NAME } from "../storage/sql-utils.js";
 import { queryPlayStats } from "./plays.js";
 import { decodeHtmlEntities } from "../utils/html-entities.js";
 import { SQL_VIRTUAL_LOCATION } from "../utils/play-location.js";
@@ -63,7 +64,7 @@ export function queryCollectionSummary(db: Db): CollectionSummary {
     .prepare(
       `SELECT
          ce.bgg_id,
-         COALESCE(g.name, ce.name) AS name,
+         ${SQL_RESOLVED_GAME_NAME} AS name,
          COALESCE(g.thumbnail_url, ce.thumbnail_url) AS thumbnail_url,
          ce.num_plays AS value
        FROM collection_entries ce

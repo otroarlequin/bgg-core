@@ -1,4 +1,5 @@
 import type { Db } from "../storage/database.js";
+import { SQL_RESOLVED_GAME_NAME } from "../storage/sql-utils.js";
 import {
   decodeHtmlEntities,
   decodeHtmlEntitiesList,
@@ -268,7 +269,7 @@ function loadOwnedRows(db: Db): OwnedRow[] {
     .prepare(
       `SELECT
          ce.bgg_id,
-         COALESCE(g.name, ce.name) AS name,
+         ${SQL_RESOLVED_GAME_NAME} AS name,
          ce.subtype,
          ce.personal_rating,
          ce.num_plays,
@@ -306,7 +307,7 @@ function loadLocalCandidates(
     .prepare(
       `SELECT
          ce.bgg_id,
-         COALESCE(g.name, ce.name) AS name,
+         ${SQL_RESOLVED_GAME_NAME} AS name,
          ce.subtype,
          COALESCE(g.year_published, ce.year_published) AS year_published,
          COALESCE(g.thumbnail_url, ce.thumbnail_url) AS thumbnail_url,
