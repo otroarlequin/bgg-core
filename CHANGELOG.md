@@ -21,6 +21,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Script `npm run fly:cost` para estimar coste de máquinas Fly.
 
 ### Changed
+- Fly `bgg-core`: `auto_stop_machines = 'suspend'` (sigue `min_machines_running = 0`) para cold starts más rápidos desde el móvil.
 - `npm run db:push` sincroniza colección y partidas en local antes de subir (evita que un local desactualizado haga retroceder Fly); aborta si falla, `--skip-bgg-sync` lo omite.
 - **Wishlist × BGG Market:** caché al entrar (`action: "status"`), botón «Actualizar Market» aparte de filtros; notificaciones solo por alertas de precio (watches), no por cada listing; cards con «Alerta +/✎» y scroll a ofertas desde campana/watches.
 - Hub **Actividades:** agrupado (Mesa / Wishlist / Descubrir / Analizar) y tiles/iconos más legibles.
