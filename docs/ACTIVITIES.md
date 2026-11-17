@@ -86,8 +86,8 @@ Documentos relacionados: [ARCHITECTURE.md](./ARCHITECTURE.md), [COMMANDS.md](./C
 |--|--|
 | **ID** | `wishlist-store-match` |
 | **Objetivo** | Cruzar wishlist con stock/precio en tiendas de España (Mathom, Ferretería Ibermadrid, Maldito Games) y de Estados Unidos (Game Nerdz, Miniature Market, Noble Knight). |
-| **Cómo** | Búsqueda en vivo por ítem; match estricto por título/editorial; juego base y expansión no se cruzan; caché SQLite 24h; rate limit. Noble Knight (API Zoovu) lista copias graduadas: se muestra la condición (Nuevo / Sellado / Usado + grado NK) y el precio es el de la copia más barata en stock, con las demás como «Otras copias». Solo productos `Boxed Game` / `Blister` / `Ziplock` de Board Games. |
-| **Deps** | Red a tiendas; pensado para uso **personal local** (no Amazon ni CSV). |
+| **Cómo** | Búsqueda en vivo por ítem; match estricto por título/editorial; juego base y expansión no se cruzan; caché SQLite 24h; rate limit. Noble Knight (API Zoovu) lista copias graduadas: se muestra la condición (Nuevo / Sellado / Usado + grado NK) y el precio es el de la copia más barata en stock, con las demás como «Otras copias». Solo productos `Boxed Game` / `Blister` / `Ziplock` de Board Games. Mathom y Ferretería Ibermadrid usan el ajax PrestaShop de la tienda (con cookies de sesión pública y cabeceras de navegador) y, si el XHR llega 403, la página HTML de búsqueda. Maldito Games usa Magento GraphQL `products(search:)` con `Origin`/`Referer`/`Store`. Un fallo de una tienda se registra y no aborta el resto. |
+| **Deps** | Red a tiendas; pensado para uso **personal local** (no Amazon ni CSV). Cloudflare puede devolver un JS challenge (`HTTP 403 (Cloudflare challenge)`) desde IPs de datacenter (Fly y otros clouds); desde una IP doméstica las mismas peticiones suelen pasar. No se resuelven captchas ni muros de pago. |
 | **Personal** | Sí. |
 | **Profile** | Puede estar limitado por política de producto / rate; no es el foco de visitantes. |
 

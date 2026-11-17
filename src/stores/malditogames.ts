@@ -1,8 +1,13 @@
-import { rateLimitedFetch } from "./http.js";
+import {
+  describeStoreHttpStatus,
+  isCloudflareChallenge,
+  rateLimitedFetch,
+} from "./http.js";
 import { parseMalditoGamesSearchJson } from "./parsers.js";
 import type { StoreOffer } from "./types.js";
 
-const MALDITO_GRAPHQL = "https://tienda.malditogames.com/graphql";
+const MALDITO_ORIGIN = "https://tienda.malditogames.com";
+const MALDITO_GRAPHQL = `${MALDITO_ORIGIN}/graphql`;
 
 const PRODUCTS_SEARCH_QUERY = `
 query StoreSearch($query: String!, $pageSize: Int!) {
@@ -29,22 +34,48 @@ export async function searchMalditoGames(
   options: { limit?: number } = {},
 ): Promise<StoreOffer[]> {
   const limit = options.limit ?? 10;
-  const res = await rateLimitedFetch(MALDITO_GRAPHQL, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "Accept-Language": "es-ES,es;q=0.9",
-    },
-    body: JSON.stringify({
-      query: PRODUCTS_SEARCH_QUERY,
-      variables: { query, pageSize: limit },
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Maldito Games HTTP ${res.status}`);
+  let res: Response;
+  try {
+    res = await rateLimitedFetch(
+      MALDITO_GRAPHQL,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+          Origin: MALDITO_ORIGIN,
+          Referer: `${MALDITO_ORIGIN}/`,
+          Store: "default",
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+        },
+        body: JSON.stringify({
+          query: PRODUCTS_SEARCH_QUERY,
+          variables: { query, pageSize: limit },
+        }),
+      },
+      { warmupUrl: `${MALDITO_ORIGIN}/` },
+    );
+  } catch (error) {
+    throw new Error(
+      `Maldito Games ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
-  const json: unknown = await res.json();
+
+  const text = await res.text();
+  if (!res.ok || isCloudflareChallenge(res, text)) {
+    throw new Error(`Maldito Games ${describeStoreHttpStatus(res, text)}`);
+  }
+
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("Maldito Games respuesta no JSON");
+  }
+
   const offers = parseMalditoGamesSearchJson(json, limit);
   const payload = json as { errors?: Array<{ message?: string }> };
   if (

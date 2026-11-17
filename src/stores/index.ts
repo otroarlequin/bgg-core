@@ -29,7 +29,15 @@ export {
   parseMiniatureMarketSuggestHtml,
   parseMiniatureMarketManufacturer,
   parseNobleKnightSearchJson,
+  parsePrestashopSearchHtml,
   parsePrestashopSearchJson,
 } from "./parsers.js";
-export { resetStoreRateLimit, getStoreRequestDelayMs } from "./http.js";
+export {
+  describeStoreHttpStatus,
+  describeStoreNetworkError,
+  getStoreRequestDelayMs,
+  isCloudflareChallenge,
+  rateLimitedFetch,
+  resetStoreRateLimit,
+} from "./http.js";
 export { enrichMiniatureMarketPublishers } from "./miniaturemarket.js";

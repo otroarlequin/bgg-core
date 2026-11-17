@@ -372,6 +372,35 @@ function prestashopInStock(product: PrestashopProduct): boolean | null {
   return null;
 }
 
+function prestashopOfferFromProduct(
+  product: PrestashopProduct,
+  store: StoreId,
+): StoreOffer | null {
+  const name = product.name?.trim();
+  const url = prestashopUrl(product);
+  if (!name || !url) return null;
+
+  const price =
+    parseLocalizedPrice(product.price_amount) ??
+    parseLocalizedPrice(product.price) ??
+    parseLocalizedPrice(product.regular_price_amount);
+
+  const sku =
+    product.reference?.trim() ||
+    (product.id_product != null ? String(product.id_product) : null);
+
+  return {
+    store,
+    name,
+    price,
+    currency: STORE_BY_ID[store]?.currency ?? "EUR",
+    url,
+    sku,
+    inStock: prestashopInStock(product),
+    publisher: product.manufacturer_name?.trim() || null,
+  };
+}
+
 /**
  * PrestaShop 1.7 ajax search (`?ajax=1`) JSON used by Mathom and
  * Ferretería Ibermadrid.
@@ -381,37 +410,83 @@ export function parsePrestashopSearchJson(
   store: StoreId,
   limit = 10,
 ): StoreOffer[] {
-  const payload = raw as { products?: unknown };
+  const payload = raw as { products?: unknown; rendered_products?: unknown };
   const products = asObjectList(payload?.products);
-  const currency = STORE_BY_ID[store]?.currency ?? "EUR";
   const offers: StoreOffer[] = [];
 
   for (const item of products) {
     if (offers.length >= limit) break;
     if (!item || typeof item !== "object") continue;
-    const product = item as PrestashopProduct;
-    const name = product.name?.trim();
-    const url = prestashopUrl(product);
-    if (!name || !url) continue;
+    const offer = prestashopOfferFromProduct(item as PrestashopProduct, store);
+    if (offer) offers.push(offer);
+  }
 
-    const price =
-      parseLocalizedPrice(product.price_amount) ??
-      parseLocalizedPrice(product.price) ??
-      parseLocalizedPrice(product.regular_price_amount);
+  if (offers.length === 0 && typeof payload?.rendered_products === "string") {
+    return parsePrestashopSearchHtml(payload.rendered_products, store, limit);
+  }
 
-    const sku =
-      product.reference?.trim() ||
-      (product.id_product != null ? String(product.id_product) : null);
+  return offers;
+}
+
+function stripTags(html: string): string {
+  return decodeHtmlEntities(html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+}
+
+function prestashopHtmlInStock(article: string): boolean | null {
+  const addBtn = article.match(/<button\b[^>]*add-to-cart[^>]*>/i);
+  if (addBtn) return !/\bdisabled\b/i.test(addBtn[0]);
+  if (/agotado|sin stock|out of stock/i.test(article)) return false;
+  return null;
+}
+
+/**
+ * PrestaShop classic theme search HTML (`article.product-miniature`),
+ * used when ajax JSON is blocked but a normal browser search page still works.
+ */
+export function parsePrestashopSearchHtml(
+  html: string,
+  store: StoreId,
+  limit = 10,
+): StoreOffer[] {
+  const articles = html.match(/<article\b[\s\S]*?<\/article>/gi) ?? [];
+  const currency = STORE_BY_ID[store]?.currency ?? "EUR";
+  const offers: StoreOffer[] = [];
+  const seen = new Set<string>();
+
+  for (const article of articles) {
+    if (offers.length >= limit) break;
+
+    const titleMatch =
+      article.match(
+        /<h2[^>]*class="[^"]*product-title[^"]*"[^>]*>\s*<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i,
+      ) ||
+      article.match(
+        /<a\b[^>]*href="([^"]+)"[^>]*class="[^"]*product-thumbnail[^"]*"[^>]*>[\s\S]*?<img\b[^>]*alt="([^"]*)"/i,
+      );
+    if (!titleMatch) continue;
+
+    const url = titleMatch[1].trim();
+    const name = stripTags(titleMatch[2] ?? "");
+    if (!name || !url || seen.has(url)) continue;
+    seen.add(url);
+
+    const priceMatch =
+      article.match(/aria-label="Precio"[^>]*>([\s\S]*?)<\/span>/i) ||
+      article.match(/class="(?:product-)?price"[^>]*>([\s\S]*?)<\/span>/i);
+    const idMatch = article.match(/data-id-product="(\d+)"/i);
+    const publisherMatch = article.match(
+      /itemprop="brand"[^>]*>\s*(?:<[^>]+>)?\s*([^<]+)/i,
+    );
 
     offers.push({
       store,
       name,
-      price,
+      price: parseLocalizedPrice(priceMatch ? stripTags(priceMatch[1]) : null),
       currency,
       url,
-      sku,
-      inStock: prestashopInStock(product),
-      publisher: product.manufacturer_name?.trim() || null,
+      sku: idMatch?.[1] ?? null,
+      inStock: prestashopHtmlInStock(article),
+      publisher: publisherMatch?.[1]?.trim() || null,
     });
   }
 
