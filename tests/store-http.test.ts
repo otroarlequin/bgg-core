@@ -7,7 +7,6 @@ import {
   rateLimitedFetch,
   resetStoreRateLimit,
 } from "../src/stores/http.js";
-import { searchFerreteriaIbermadrid } from "../src/stores/ferreteriaibermadrid.js";
 import { searchMalditoGames } from "../src/stores/malditogames.js";
 import { searchMathom } from "../src/stores/mathom.js";
 
@@ -137,7 +136,7 @@ describe("store HTTP", () => {
 
   it("does not retry a Cloudflare challenge", async () => {
     queue.push(cfResponse());
-    const res = await rateLimitedFetch("https://ferreteriaibermadrid.es/busqueda?s=Wingspan&ajax=1");
+    const res = await rateLimitedFetch("https://mathom.es/es/buscar?s=Wingspan&ajax=1");
     expect(res.status).toBe(403);
     expect(isCloudflareChallenge(res)).toBe(true);
     expect(calls).toHaveLength(1);
@@ -179,19 +178,6 @@ describe("store HTTP", () => {
       inStock: true,
     });
     expect(calls).toHaveLength(2);
-  });
-
-  it("keeps Ibermadrid Cloudflare errors per store", async () => {
-    queue.push(cfResponse()); // warmup
-    queue.push(cfResponse()); // ajax
-    queue.push(cfResponse()); // html fallback
-
-    await expect(searchFerreteriaIbermadrid("Wingspan")).rejects.toThrow(
-      /Ferretería Ibermadrid HTTP 403 \(Cloudflare challenge\)/,
-    );
-    expect(calls[1].url).toContain("ferreteriaibermadrid.es/busqueda");
-    expect(calls[1].url).toContain("ajax=1");
-    expect(calls[1].url).toContain("controller=search");
   });
 
   it("retries Maldito GraphQL fetch failed after warmup", async () => {

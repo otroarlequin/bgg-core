@@ -3,7 +3,6 @@ export type StoreId =
   | "miniaturemarket"
   | "nobleknight"
   | "mathom"
-  | "ferreteriaibermadrid"
   | "malditogames";
 
 /** ISO 3166-1 alpha-2 country of the shop, not the product origin. */
@@ -28,12 +27,6 @@ export const STORES: readonly StoreInfo[] = [
   },
   { id: "nobleknight", label: "Noble Knight", country: "US", currency: "USD" },
   { id: "mathom", label: "Mathom", country: "ES", currency: "EUR" },
-  {
-    id: "ferreteriaibermadrid",
-    label: "Ferretería Ibermadrid",
-    country: "ES",
-    currency: "EUR",
-  },
   {
     id: "malditogames",
     label: "Maldito Games",

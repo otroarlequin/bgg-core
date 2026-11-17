@@ -18,7 +18,6 @@ const STORE_CATALOG: Array<{
   { id: "miniaturemarket", label: "Miniature Market", country: "US" },
   { id: "nobleknight", label: "Noble Knight", country: "US" },
   { id: "mathom", label: "Mathom", country: "ES" },
-  { id: "ferreteriaibermadrid", label: "Ferretería Ibermadrid", country: "ES" },
   { id: "malditogames", label: "Maldito Games", country: "ES" },
 ];
 
@@ -177,7 +176,7 @@ export function WishlistStoreMatchActivity() {
         </h2>
         <p className="mt-1 text-sm text-muted">
           Busca en vivo cada juego de tu wishlist en tiendas de España (Mathom,
-          Ferretería Ibermadrid, Maldito Games) y de Estados Unidos (Game Nerdz,
+          Maldito Games) y de Estados Unidos (Game Nerdz,
           Miniature Market, Noble Knight). Noble Knight vende copias usadas
           graduadas: se muestra la condición de cada copia y el precio es el de
           la más barata. Uso personal: rate limit + caché ~24h. Los resultados

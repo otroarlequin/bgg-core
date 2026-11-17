@@ -494,7 +494,6 @@ export type StoreId =
   | "miniaturemarket"
   | "nobleknight"
   | "mathom"
-  | "ferreteriaibermadrid"
   | "malditogames";
 
 export type StoreCountry = "US" | "ES";

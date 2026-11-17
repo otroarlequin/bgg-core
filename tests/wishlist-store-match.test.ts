@@ -223,30 +223,6 @@ describe("store parsers (fixtures, offline)", () => {
     });
   });
 
-  it("parses Ferretería Ibermadrid PrestaShop ajax JSON", () => {
-    const raw = JSON.parse(
-      readFileSync(join(fixturesDir, "ferreteriaibermadrid-search.json"), "utf8"),
-    );
-    const offers = parsePrestashopSearchJson(raw, "ferreteriaibermadrid");
-    expect(offers).toHaveLength(2);
-    expect(offers[0]).toMatchObject({
-      store: "ferreteriaibermadrid",
-      name: "Wingspan",
-      price: 49.95,
-      currency: "EUR",
-      url: "https://ferreteriaibermadrid.es/juegos-de-mesa/20601-wingspan.html",
-      sku: "MALWING",
-      inStock: true,
-      publisher: "Maldito Games",
-    });
-    expect(offers[1]).toMatchObject({
-      name: "Wingspan: Expansión Europea",
-      price: 28.5,
-      inStock: false,
-      url: "https://ferreteriaibermadrid.es/juegos-de-mesa/20602-wingspan-expansion-europea.html",
-    });
-  });
-
   it("parses Maldito Games Magento GraphQL including stock", () => {
     const raw = JSON.parse(
       readFileSync(join(fixturesDir, "malditogames-search.json"), "utf8"),
@@ -283,14 +259,12 @@ describe("store catalog", () => {
       "miniaturemarket",
       "nobleknight",
       "mathom",
-      "ferreteriaibermadrid",
       "malditogames",
     ]);
     expect(STORE_COUNTRIES.gamenerdz).toBe("US");
     expect(STORE_COUNTRIES.miniaturemarket).toBe("US");
     expect(STORE_COUNTRIES.nobleknight).toBe("US");
     expect(STORE_COUNTRIES.mathom).toBe("ES");
-    expect(STORE_COUNTRIES.ferreteriaibermadrid).toBe("ES");
     expect(STORE_COUNTRIES.malditogames).toBe("ES");
   });
 });

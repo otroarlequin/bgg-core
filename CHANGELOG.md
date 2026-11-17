@@ -7,8 +7,11 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Removed
+- **Ferretería Ibermadrid** del selector Wishlist × tiendas (catálogo, adaptador PrestaShop, fixtures, checkbox). El origen `ferreteriaibermadrid.es` está detrás de un desafío JS de Cloudflare también desde IP doméstica; no hay búsqueda/API pública. Ludonauta.es lista esos productos como comparador (HTML público, afiliación Awin hacia la tienda; sin JSON API). No se scrapea Ludonauta ni se resuelve Cloudflare. Mathom y Maldito Games siguen.
+
 ### Fixed
-- **Wishlist × tiendas (Mathom / Ibermadrid / Maldito):** las búsquedas van con cabeceras de navegador (UA Chrome actual, `Accept`/`Referer`/`Origin`, cookies de sesión pública, timeout y reintentos). Ajax PrestaShop cae a la página HTML de búsqueda si Cloudflare/WAF bloquea el XHR. Un 403 o `fetch failed` de una tienda sigue sin abortar el scan. Cloudflare JS challenge en IPs de datacenter (p. ej. Fly) puede seguir bloqueando; en IP doméstica las mismas cabeceras suelen bastar.
+- **Wishlist × tiendas (Mathom / Maldito):** las búsquedas van con cabeceras de navegador (UA Chrome actual, `Accept`/`Referer`/`Origin`, cookies de sesión pública, timeout y reintentos). Ajax PrestaShop cae a la página HTML de búsqueda si Cloudflare/WAF bloquea el XHR. Un 403 o `fetch failed` de una tienda sigue sin abortar el scan. Cloudflare JS challenge en IPs de datacenter (p. ej. Fly) puede seguir bloqueando; en IP doméstica las mismas cabeceras suelen bastar.
 - **Colección tras sync Fly:** títulos que salían como «Unknown» (juegos nuevos / aún no enriquecidos con `/thing`). El XML de colección de BGG trae el nombre como texto (`#text`), no como atributo `value`; el mapper ahora lee ambas formas. El próximo sync hace fetch completo si quedan placeholders, y la UI no deja que un `games.name` «Unknown» tape el título de colección.
 - **Wishlist × tiendas:** un juego base ya no se empareja con su expansión («Galileo Galilei» ≠ «… - Luna Expansion») ni una expansión con el juego base solo («Ironwood: Steel & Spirit» ≠ «Ironwood»), en todas las tiendas. «4th» y «Fourth» cuentan como la misma edición.
 - Workflow **Market price watches cron**: wake de `/api/health` antes del POST, reintentos en 502/503 y cuerpo HTTP visible en fallos (evita exit 22 por cold start de Fly).
