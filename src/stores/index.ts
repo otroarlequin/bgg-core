@@ -37,7 +37,9 @@ export {
   describeStoreNetworkError,
   getStoreRequestDelayMs,
   isCloudflareChallenge,
+  isCloudflareChallengeError,
   rateLimitedFetch,
   resetStoreRateLimit,
 } from "./http.js";
+export { IBERMADRID_CLOUDFLARE_ERROR } from "./ferreteriaibermadrid.js";
 export { enrichMiniatureMarketPublishers } from "./miniaturemarket.js";

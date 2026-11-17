@@ -4,10 +4,14 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   isCloudflareChallenge,
+  isCloudflareChallengeError,
   rateLimitedFetch,
   resetStoreRateLimit,
 } from "../src/stores/http.js";
-import { searchFerreteriaIbermadrid } from "../src/stores/ferreteriaibermadrid.js";
+import {
+  IBERMADRID_CLOUDFLARE_ERROR,
+  searchFerreteriaIbermadrid,
+} from "../src/stores/ferreteriaibermadrid.js";
 import { searchMalditoGames } from "../src/stores/malditogames.js";
 import { searchMathom } from "../src/stores/mathom.js";
 
@@ -99,6 +103,13 @@ describe("store HTTP", () => {
     const res = cfResponse();
     expect(isCloudflareChallenge(res, CF_HTML)).toBe(true);
     expect(isCloudflareChallenge(jsonResponse("{}", 403), "{}")).toBe(false);
+    expect(isCloudflareChallengeError(new Error("HTTP 403 (Cloudflare challenge)"))).toBe(
+      true,
+    );
+    expect(isCloudflareChallengeError(new Error(IBERMADRID_CLOUDFLARE_ERROR))).toBe(
+      true,
+    );
+    expect(isCloudflareChallengeError(new Error("GN blocked"))).toBe(false);
   });
 
   it("sends a current Chrome UA, Referer and cookies on the next request", async () => {
@@ -187,7 +198,7 @@ describe("store HTTP", () => {
     queue.push(cfResponse()); // html fallback
 
     await expect(searchFerreteriaIbermadrid("Wingspan")).rejects.toThrow(
-      /Ferretería Ibermadrid HTTP 403 \(Cloudflare challenge\)/,
+      IBERMADRID_CLOUDFLARE_ERROR,
     );
     expect(calls[1].url).toContain("ferreteriaibermadrid.es/busqueda");
     expect(calls[1].url).toContain("ajax=1");

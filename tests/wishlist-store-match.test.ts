@@ -18,6 +18,7 @@ import {
   parsePrestashopSearchHtml,
   parsePrestashopSearchJson,
 } from "../src/stores/parsers.js";
+import { IBERMADRID_CLOUDFLARE_ERROR } from "../src/stores/ferreteriaibermadrid.js";
 import {
   STORE_COUNTRIES,
   STORE_IDS,
@@ -493,6 +494,111 @@ describe("queryWishlistStoreMatch cache + match", () => {
     expect(result.errors[0].store).toBe("gamenerdz");
     expect(result.matches).toHaveLength(1);
     expect(result.matches[0].offers[0].store).toBe("miniaturemarket");
+  });
+
+  it("skips remaining games after a Cloudflare challenge", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bgg-store-cf-skip-"));
+    const db = createDatabase(join(dir, "test.db"));
+    const storage = createStorageService(db);
+
+    storage.collection.upsertCollectionEntries(storage.db, [
+      entry({
+        collId: 1,
+        bggId: 1,
+        name: "Bottle Imp",
+        wishlist: true,
+        wishlistPriority: 1,
+      }),
+      entry({
+        collId: 2,
+        bggId: 2,
+        name: "Wingspan",
+        wishlist: true,
+        wishlistPriority: 2,
+      }),
+    ]);
+
+    let ibermadridCalls = 0;
+    let mathomCalls = 0;
+
+    const result = await queryWishlistStoreMatch(db, {
+      stores: ["ferreteriaibermadrid", "mathom"],
+      maxItems: 10,
+      forceRefresh: true,
+      searchers: {
+        ferreteriaibermadrid: async () => {
+          ibermadridCalls += 1;
+          throw new Error(IBERMADRID_CLOUDFLARE_ERROR);
+        },
+        mathom: async () => {
+          mathomCalls += 1;
+          return [
+            offer({
+              store: "mathom",
+              name: "Wingspan",
+              price: 48.4,
+              currency: "EUR",
+              url: "https://mathom.es/es/wingspan/41170-wingspan.html",
+            }),
+          ];
+        },
+      },
+    });
+
+    expect(ibermadridCalls).toBe(1);
+    expect(mathomCalls).toBe(2);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toMatchObject({
+      store: "ferreteriaibermadrid",
+      query: "",
+    });
+    expect(result.errors[0].error).toMatch(/desafío JavaScript/);
+    expect(result.errors[0].error).toMatch(
+      /Se omite el resto de juegos de esta tienda/,
+    );
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0].name).toBe("Wingspan");
+    expect(result.matches[0].offers[0].store).toBe("mathom");
+  });
+
+  it("still records non-Cloudflare errors per game", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bgg-store-err-each-"));
+    const db = createDatabase(join(dir, "test.db"));
+    const storage = createStorageService(db);
+
+    storage.collection.upsertCollectionEntries(storage.db, [
+      entry({
+        collId: 1,
+        bggId: 1,
+        name: "Ark Nova",
+        wishlist: true,
+        wishlistPriority: 1,
+      }),
+      entry({
+        collId: 2,
+        bggId: 2,
+        name: "Wingspan",
+        wishlist: true,
+        wishlistPriority: 2,
+      }),
+    ]);
+
+    let gnCalls = 0;
+    const result = await queryWishlistStoreMatch(db, {
+      stores: ["gamenerdz"],
+      maxItems: 10,
+      forceRefresh: true,
+      searchers: {
+        gamenerdz: async () => {
+          gnCalls += 1;
+          throw new Error("GN blocked");
+        },
+      },
+    });
+
+    expect(gnCalls).toBe(2);
+    expect(result.errors).toHaveLength(2);
+    expect(result.errors.map((e) => e.query)).toEqual(["Ark Nova", "Wingspan"]);
   });
 
   it("does not strong-match wrong edition or publisher conflict", async () => {
