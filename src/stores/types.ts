@@ -1,12 +1,60 @@
-export type StoreId = "gamenerdz" | "miniaturemarket" | "nobleknight";
+export type StoreId =
+  | "gamenerdz"
+  | "miniaturemarket"
+  | "nobleknight"
+  | "mathom"
+  | "ferreteriaibermadrid"
+  | "malditogames";
 
-export const STORE_IDS: StoreId[] = ["gamenerdz", "miniaturemarket", "nobleknight"];
+/** ISO 3166-1 alpha-2 country of the shop, not the product origin. */
+export type StoreCountry = "US" | "ES";
 
-export const STORE_LABELS: Record<StoreId, string> = {
-  gamenerdz: "Game Nerdz",
-  miniaturemarket: "Miniature Market",
-  nobleknight: "Noble Knight",
-};
+export type StoreCurrency = "USD" | "EUR";
+
+export interface StoreInfo {
+  id: StoreId;
+  label: string;
+  country: StoreCountry;
+  currency: StoreCurrency;
+}
+
+export const STORES: readonly StoreInfo[] = [
+  { id: "gamenerdz", label: "Game Nerdz", country: "US", currency: "USD" },
+  {
+    id: "miniaturemarket",
+    label: "Miniature Market",
+    country: "US",
+    currency: "USD",
+  },
+  { id: "nobleknight", label: "Noble Knight", country: "US", currency: "USD" },
+  { id: "mathom", label: "Mathom", country: "ES", currency: "EUR" },
+  {
+    id: "ferreteriaibermadrid",
+    label: "Ferretería Ibermadrid",
+    country: "ES",
+    currency: "EUR",
+  },
+  {
+    id: "malditogames",
+    label: "Maldito Games",
+    country: "ES",
+    currency: "EUR",
+  },
+];
+
+export const STORE_IDS: StoreId[] = STORES.map((store) => store.id);
+
+export const STORE_BY_ID: Record<StoreId, StoreInfo> = Object.fromEntries(
+  STORES.map((store) => [store.id, store]),
+) as Record<StoreId, StoreInfo>;
+
+export const STORE_LABELS: Record<StoreId, string> = Object.fromEntries(
+  STORES.map((store) => [store.id, store.label]),
+) as Record<StoreId, string>;
+
+export const STORE_COUNTRIES: Record<StoreId, StoreCountry> = Object.fromEntries(
+  STORES.map((store) => [store.id, store.country]),
+) as Record<StoreId, StoreCountry>;
 
 /** new = factory new; sealed = still shrink-wrapped but box graded below mint. */
 export type ConditionKind = "new" | "sealed" | "used";

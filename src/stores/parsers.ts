@@ -1,8 +1,10 @@
 import type {
   ConditionKind,
+  StoreId,
   StoreOffer,
   StoreOfferVariant,
 } from "./types.js";
+import { STORE_BY_ID } from "./types.js";
 
 interface StorePassProduct {
   name?: string;
@@ -295,4 +297,191 @@ export function parseMiniatureMarketManufacturer(html: string): string | null {
     }
   }
   return null;
+}
+
+function asObjectList(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") return Object.values(raw);
+  return [];
+}
+
+/**
+ * Parse "48,40 €" / "1.234,56" / "48.40" into a number.
+ */
+export function parseLocalizedPrice(raw: unknown): number | null {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw !== "string") return null;
+  const match = raw.trim().match(/(\d+(?:[.,]\d{3})*[.,]\d{2}|\d+)/);
+  if (!match) return null;
+  let num = match[1];
+  if (num.includes(",") && num.includes(".")) {
+    if (num.lastIndexOf(",") > num.lastIndexOf(".")) {
+      num = num.replace(/\./g, "").replace(",", ".");
+    } else {
+      num = num.replace(/,/g, "");
+    }
+  } else if (num.includes(",")) {
+    num = num.replace(",", ".");
+  }
+  const value = Number(num);
+  return Number.isFinite(value) ? value : null;
+}
+
+interface PrestashopProduct {
+  name?: string;
+  url?: string;
+  canonical_url?: string;
+  link?: string;
+  price_amount?: number | string;
+  regular_price_amount?: number | string;
+  price?: string | number;
+  manufacturer_name?: string;
+  reference?: string;
+  id_product?: number | string;
+  add_to_cart_url?: string | false | null;
+  availability?: string;
+  quantity?: number;
+}
+
+function prestashopUrl(product: PrestashopProduct): string {
+  return (
+    product.url?.trim() ||
+    product.canonical_url?.trim() ||
+    product.link?.trim() ||
+    ""
+  );
+}
+
+function prestashopInStock(product: PrestashopProduct): boolean | null {
+  if (typeof product.add_to_cart_url === "string") {
+    return product.add_to_cart_url.trim().length > 0;
+  }
+  // PrestaShop sends null/false when the product cannot go in the cart (agotado).
+  if (product.add_to_cart_url === false || product.add_to_cart_url === null) {
+    return false;
+  }
+  if (typeof product.quantity === "number") return product.quantity > 0;
+  if (typeof product.availability === "string") {
+    if (/agotado|sin stock|out of stock/i.test(product.availability)) {
+      return false;
+    }
+    if (/en stock|in stock|disponible/i.test(product.availability)) {
+      return true;
+    }
+  }
+  return null;
+}
+
+/**
+ * PrestaShop 1.7 ajax search (`?ajax=1`) JSON used by Mathom and
+ * Ferretería Ibermadrid.
+ */
+export function parsePrestashopSearchJson(
+  raw: unknown,
+  store: StoreId,
+  limit = 10,
+): StoreOffer[] {
+  const payload = raw as { products?: unknown };
+  const products = asObjectList(payload?.products);
+  const currency = STORE_BY_ID[store]?.currency ?? "EUR";
+  const offers: StoreOffer[] = [];
+
+  for (const item of products) {
+    if (offers.length >= limit) break;
+    if (!item || typeof item !== "object") continue;
+    const product = item as PrestashopProduct;
+    const name = product.name?.trim();
+    const url = prestashopUrl(product);
+    if (!name || !url) continue;
+
+    const price =
+      parseLocalizedPrice(product.price_amount) ??
+      parseLocalizedPrice(product.price) ??
+      parseLocalizedPrice(product.regular_price_amount);
+
+    const sku =
+      product.reference?.trim() ||
+      (product.id_product != null ? String(product.id_product) : null);
+
+    offers.push({
+      store,
+      name,
+      price,
+      currency,
+      url,
+      sku,
+      inStock: prestashopInStock(product),
+      publisher: product.manufacturer_name?.trim() || null,
+    });
+  }
+
+  return offers;
+}
+
+interface MagentoGqlProduct {
+  name?: string;
+  sku?: string;
+  url_key?: string;
+  url_suffix?: string | null;
+  url_rewrites?: Array<{ url?: string }>;
+  stock_status?: string;
+  price_range?: {
+    minimum_price?: {
+      final_price?: { value?: number; currency?: string };
+    };
+  };
+}
+
+const MALDITO_ORIGIN = "https://tienda.malditogames.com";
+
+function magentoProductUrl(product: MagentoGqlProduct): string {
+  const rewrite = product.url_rewrites?.find((row) => row.url?.trim())?.url;
+  const suffix = product.url_suffix ?? ".html";
+  const path = (rewrite || `${product.url_key ?? ""}${suffix}`).replace(
+    /^\//,
+    "",
+  );
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${MALDITO_ORIGIN}/${path}`;
+}
+
+/**
+ * Magento GraphQL `products(search:)` used by tienda.malditogames.com.
+ */
+export function parseMalditoGamesSearchJson(
+  raw: unknown,
+  limit = 10,
+): StoreOffer[] {
+  const payload = raw as {
+    data?: { products?: { items?: unknown } };
+  };
+  const items = asObjectList(payload?.data?.products?.items);
+  const offers: StoreOffer[] = [];
+
+  for (const item of items) {
+    if (offers.length >= limit) break;
+    if (!item || typeof item !== "object") continue;
+    const product = item as MagentoGqlProduct;
+    const name = product.name?.trim();
+    const url = magentoProductUrl(product);
+    if (!name || !url) continue;
+
+    const finalPrice = product.price_range?.minimum_price?.final_price;
+    const price = parseLocalizedPrice(finalPrice?.value);
+    const stock = product.stock_status?.toUpperCase();
+
+    offers.push({
+      store: "malditogames",
+      name,
+      price,
+      currency: finalPrice?.currency?.trim() || "EUR",
+      url,
+      sku: product.sku?.trim() || null,
+      inStock: stock ? stock === "IN_STOCK" : null,
+      publisher: null,
+    });
+  }
+
+  return offers;
 }

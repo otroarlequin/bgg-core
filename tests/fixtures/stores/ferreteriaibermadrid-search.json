@@ -1,0 +1,22 @@
+{
+  "products": [
+    {
+      "id_product": 20601,
+      "name": "Wingspan",
+      "url": "https://ferreteriaibermadrid.es/juegos-de-mesa/20601-wingspan.html",
+      "price": "49,95 €",
+      "manufacturer_name": "Maldito Games",
+      "reference": "MALWING",
+      "availability": "STOCK EN TIENDA. Envío en 24-72 horas",
+      "add_to_cart_url": "https://ferreteriaibermadrid.es/carrito?add=1&id_product=20601"
+    },
+    {
+      "id_product": 20602,
+      "name": "Wingspan: Expansión Europea",
+      "canonical_url": "https://ferreteriaibermadrid.es/juegos-de-mesa/20602-wingspan-expansion-europea.html",
+      "price_amount": "28,50",
+      "manufacturer_name": "Maldito Games",
+      "add_to_cart_url": false
+    }
+  ]
+}
