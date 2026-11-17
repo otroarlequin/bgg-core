@@ -15,6 +15,7 @@ import {
   parseMiniatureMarketManufacturer,
   parseMiniatureMarketSuggestHtml,
   parseNobleKnightSearchJson,
+  parsePrestashopSearchHtml,
   parsePrestashopSearchJson,
 } from "../src/stores/parsers.js";
 import {
@@ -198,6 +199,27 @@ describe("store parsers (fixtures, offline)", () => {
       sku: "SL20053",
       inStock: false,
       currency: "EUR",
+    });
+  });
+
+  it("parses Mathom PrestaShop search HTML including stock", () => {
+    const html = readFileSync(join(fixturesDir, "mathom-search.html"), "utf8");
+    const offers = parsePrestashopSearchHtml(html, "mathom");
+    expect(offers).toHaveLength(2);
+    expect(offers[0]).toMatchObject({
+      store: "mathom",
+      name: "Wingspan",
+      price: 48.4,
+      currency: "EUR",
+      url: "https://mathom.es/es/wingspan/41170-wingspan-8436578810277.html",
+      sku: "41170",
+      inStock: true,
+    });
+    expect(offers[1]).toMatchObject({
+      name: "Wingspan: Expansión Europea",
+      price: 22.5,
+      sku: "42816",
+      inStock: false,
     });
   });
 
