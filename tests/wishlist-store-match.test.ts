@@ -10,11 +10,18 @@ import { createDatabase, createStorageService } from "../src/storage/index.js";
 import {
   classifyNobleKnightCondition,
   parseGameNerdzSearchJson,
+  parseLocalizedPrice,
+  parseMalditoGamesSearchJson,
   parseMiniatureMarketManufacturer,
   parseMiniatureMarketSuggestHtml,
   parseNobleKnightSearchJson,
+  parsePrestashopSearchJson,
 } from "../src/stores/parsers.js";
-import type { StoreOffer } from "../src/stores/types.js";
+import {
+  STORE_COUNTRIES,
+  STORE_IDS,
+  type StoreOffer,
+} from "../src/stores/types.js";
 import {
   TITLE_AMBIGUOUS_MIN,
   TITLE_MATCH_THRESHOLD,
@@ -168,6 +175,101 @@ describe("store parsers (fixtures, offline)", () => {
     expect(classifyNobleKnightCondition("VG+/NM")).toBe("used");
     expect(classifyNobleKnightCondition("VG+/Mint")).toBe("used");
     expect(classifyNobleKnightCondition("Fair/EX")).toBe("used");
+  });
+
+  it("parses Mathom PrestaShop ajax JSON including publishers and stock", () => {
+    const raw = JSON.parse(
+      readFileSync(join(fixturesDir, "mathom-search.json"), "utf8"),
+    );
+    const offers = parsePrestashopSearchJson(raw, "mathom");
+    expect(offers).toHaveLength(2);
+    expect(offers[0]).toMatchObject({
+      store: "mathom",
+      name: "Wingspan",
+      price: 48.4,
+      currency: "EUR",
+      url: "https://mathom.es/es/wingspan/41170-wingspan-8436578810277.html",
+      sku: "41170",
+      inStock: true,
+      publisher: "Maldito Games",
+    });
+    expect(offers[1]).toMatchObject({
+      name: "Wingspan: Expansión Europea",
+      sku: "SL20053",
+      inStock: false,
+      currency: "EUR",
+    });
+  });
+
+  it("parses Ferretería Ibermadrid PrestaShop ajax JSON", () => {
+    const raw = JSON.parse(
+      readFileSync(join(fixturesDir, "ferreteriaibermadrid-search.json"), "utf8"),
+    );
+    const offers = parsePrestashopSearchJson(raw, "ferreteriaibermadrid");
+    expect(offers).toHaveLength(2);
+    expect(offers[0]).toMatchObject({
+      store: "ferreteriaibermadrid",
+      name: "Wingspan",
+      price: 49.95,
+      currency: "EUR",
+      url: "https://ferreteriaibermadrid.es/juegos-de-mesa/20601-wingspan.html",
+      sku: "MALWING",
+      inStock: true,
+      publisher: "Maldito Games",
+    });
+    expect(offers[1]).toMatchObject({
+      name: "Wingspan: Expansión Europea",
+      price: 28.5,
+      inStock: false,
+      url: "https://ferreteriaibermadrid.es/juegos-de-mesa/20602-wingspan-expansion-europea.html",
+    });
+  });
+
+  it("parses Maldito Games Magento GraphQL including stock", () => {
+    const raw = JSON.parse(
+      readFileSync(join(fixturesDir, "malditogames-search.json"), "utf8"),
+    );
+    const offers = parseMalditoGamesSearchJson(raw);
+    expect(offers).toHaveLength(2);
+    expect(offers[0]).toMatchObject({
+      store: "malditogames",
+      name: "Wingspan",
+      price: 55,
+      currency: "EUR",
+      url: "https://tienda.malditogames.com/174-wingspan.html",
+      sku: "8436578810277",
+      inStock: true,
+    });
+    expect(offers[1]).toMatchObject({
+      name: "Nesting Box - Wingspan",
+      inStock: false,
+      url: "https://tienda.malditogames.com/781-nesting-box-wingspan.html",
+    });
+  });
+
+  it("parses localized euro prices", () => {
+    expect(parseLocalizedPrice("48,40 €")).toBe(48.4);
+    expect(parseLocalizedPrice("1.234,56")).toBe(1234.56);
+    expect(parseLocalizedPrice(22.5)).toBe(22.5);
+  });
+});
+
+describe("store catalog", () => {
+  it("tags existing shops as US and the new ones as ES", () => {
+    expect(STORE_IDS).toEqual([
+      "gamenerdz",
+      "miniaturemarket",
+      "nobleknight",
+      "mathom",
+      "ferreteriaibermadrid",
+      "malditogames",
+    ]);
+    expect(STORE_COUNTRIES.gamenerdz).toBe("US");
+    expect(STORE_COUNTRIES.miniaturemarket).toBe("US");
+    expect(STORE_COUNTRIES.nobleknight).toBe("US");
+    expect(STORE_COUNTRIES.mathom).toBe("ES");
+    expect(STORE_COUNTRIES.ferreteriaibermadrid).toBe("ES");
+    expect(STORE_COUNTRIES.malditogames).toBe("ES");
   });
 });
 
@@ -538,5 +640,46 @@ describe("queryWishlistStoreMatch cache + match", () => {
       "Wingspan: European Expansion",
     ]);
     expect(result.noOffer).toBe(2);
+  });
+
+  it("matches a Spanish store offer with EUR", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bgg-store-es-"));
+    const db = createDatabase(join(dir, "test.db"));
+    const storage = createStorageService(db);
+
+    storage.collection.upsertCollectionEntries(storage.db, [
+      entry({
+        collId: 1,
+        bggId: 266192,
+        name: "Wingspan",
+        wishlist: true,
+        wishlistPriority: 1,
+      }),
+    ]);
+
+    const result = await queryWishlistStoreMatch(db, {
+      stores: ["mathom"],
+      maxItems: 5,
+      forceRefresh: true,
+      searchers: {
+        mathom: async () => [
+          offer({
+            store: "mathom",
+            name: "Wingspan",
+            price: 48.4,
+            currency: "EUR",
+            url: "https://mathom.es/es/wingspan/41170-wingspan-8436578810277.html",
+            publisher: "Maldito Games",
+          }),
+        ],
+      },
+    });
+
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0].offers[0]).toMatchObject({
+      store: "mathom",
+      currency: "EUR",
+      price: 48.4,
+    });
   });
 });

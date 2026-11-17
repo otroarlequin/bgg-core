@@ -489,7 +489,15 @@ export interface HotnessScoutResult {
   profile: SmartWishlistResult["profile"];
 }
 
-export type StoreId = "gamenerdz" | "miniaturemarket" | "nobleknight";
+export type StoreId =
+  | "gamenerdz"
+  | "miniaturemarket"
+  | "nobleknight"
+  | "mathom"
+  | "ferreteriaibermadrid"
+  | "malditogames";
+
+export type StoreCountry = "US" | "ES";
 
 export type ConditionKind = "new" | "sealed" | "used";
 

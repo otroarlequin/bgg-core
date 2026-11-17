@@ -1,0 +1,34 @@
+{
+  "data": {
+    "products": {
+      "items": [
+        {
+          "name": "Wingspan",
+          "sku": "8436578810277",
+          "url_key": "174-wingspan",
+          "url_suffix": ".html",
+          "url_rewrites": [{ "url": "174-wingspan.html" }],
+          "stock_status": "IN_STOCK",
+          "price_range": {
+            "minimum_price": {
+              "final_price": { "value": 55, "currency": "EUR" }
+            }
+          }
+        },
+        {
+          "name": "Nesting Box - Wingspan",
+          "sku": "MALDITOGAMES-266192-NB",
+          "url_key": "781-nesting-box-wingspan",
+          "url_suffix": ".html",
+          "url_rewrites": [{ "url": "781-nesting-box-wingspan.html" }],
+          "stock_status": "OUT_OF_STOCK",
+          "price_range": {
+            "minimum_price": {
+              "final_price": { "value": 60, "currency": "EUR" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

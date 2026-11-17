@@ -72,7 +72,7 @@ const activityGroups: Array<{ title: string; items: ActivityTile[] }> = [
         id: "wishlist-store-match",
         title: "Wishlist × tiendas",
         description:
-          "Precio y stock en Game Nerdz, Miniature Market y Noble Knight (con usados).",
+          "Precio y stock en tiendas de España y EE. UU. (con usados en Noble Knight).",
         Icon: StoreIcon,
       },
       {

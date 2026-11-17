@@ -3,20 +3,39 @@ import { postWishlistStoreMatch } from "../../api/client";
 import type {
   ConditionKind,
   ScoredStoreOffer,
+  StoreCountry,
   StoreId,
   WishlistStoreMatchResult,
 } from "../../api/types";
 import { BggLink } from "../../components/BggLink";
 
-const STORE_LABELS: Record<StoreId, string> = {
-  gamenerdz: "Game Nerdz",
-  miniaturemarket: "Miniature Market",
-  nobleknight: "Noble Knight",
+const STORE_CATALOG: Array<{
+  id: StoreId;
+  label: string;
+  country: StoreCountry;
+}> = [
+  { id: "gamenerdz", label: "Game Nerdz", country: "US" },
+  { id: "miniaturemarket", label: "Miniature Market", country: "US" },
+  { id: "nobleknight", label: "Noble Knight", country: "US" },
+  { id: "mathom", label: "Mathom", country: "ES" },
+  { id: "ferreteriaibermadrid", label: "Ferretería Ibermadrid", country: "ES" },
+  { id: "malditogames", label: "Maldito Games", country: "ES" },
+];
+
+const STORE_LABELS: Record<StoreId, string> = Object.fromEntries(
+  STORE_CATALOG.map((store) => [store.id, store.label]),
+) as Record<StoreId, string>;
+
+const STORE_COUNTRIES: Record<StoreId, StoreCountry> = Object.fromEntries(
+  STORE_CATALOG.map((store) => [store.id, store.country]),
+) as Record<StoreId, StoreCountry>;
+
+const COUNTRY_LABELS: Record<StoreCountry, string> = {
+  US: "Estados Unidos",
+  ES: "España",
 };
 
-const STORE_OPTIONS: Array<{ id: StoreId; label: string }> = (
-  Object.keys(STORE_LABELS) as StoreId[]
-).map((id) => ({ id, label: STORE_LABELS[id] }));
+const COUNTRY_ORDER: StoreCountry[] = ["ES", "US"];
 
 const CONDITION_KIND_LABELS: Record<ConditionKind, string> = {
   new: "Nuevo",
@@ -33,9 +52,17 @@ const CONDITION_KIND_CLASSES: Record<ConditionKind, string> = {
 const NK_GRADE_HELP =
   "Grados Noble Knight: SW = sellado (entre paréntesis el estado de la caja), MINT/New = nuevo, NM = casi nuevo, EX = excelente, VG = muy bueno, Fair = muy usado. «A/B» = caja/contenido.";
 
-function formatPrice(offer: ScoredStoreOffer): string {
+function formatPrice(offer: Pick<ScoredStoreOffer, "price" | "currency">): string {
   if (offer.price == null) return "—";
+  if (offer.currency === "EUR") {
+    return `${offer.price.toFixed(2).replace(".", ",")} €`;
+  }
   return `$${offer.price.toFixed(2)} ${offer.currency}`;
+}
+
+function storeCountryLabel(store: StoreId): string | null {
+  const country = STORE_COUNTRIES[store];
+  return country ? COUNTRY_LABELS[country] : null;
 }
 
 function ConditionChip({
@@ -104,7 +131,7 @@ function wishlistPriorityLabel(priority: number | null | undefined): string | nu
 
 export function WishlistStoreMatchActivity() {
   const [stores, setStores] = useState<StoreId[]>(
-    STORE_OPTIONS.map((opt) => opt.id),
+    STORE_CATALOG.map((opt) => opt.id),
   );
   const [inStockOnly, setInStockOnly] = useState(true);
   const [maxItems, setMaxItems] = useState(20);
@@ -149,26 +176,42 @@ export function WishlistStoreMatchActivity() {
           Wishlist × tiendas
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Busca en vivo cada juego de tu wishlist en Game Nerdz, Miniature
-          Market y Noble Knight. Noble Knight vende copias usadas graduadas: se
-          muestra la condición de cada copia y el precio es el de la más barata.
-          Uso personal: rate limit + caché ~24h. Los resultados pueden
-          desactualizarse.
+          Busca en vivo cada juego de tu wishlist en tiendas de España (Mathom,
+          Ferretería Ibermadrid, Maldito Games) y de Estados Unidos (Game Nerdz,
+          Miniature Market, Noble Knight). Noble Knight vende copias usadas
+          graduadas: se muestra la condición de cada copia y el precio es el de
+          la más barata. Uso personal: rate limit + caché ~24h. Los resultados
+          pueden desactualizarse.
         </p>
       </div>
 
       <div className="rounded-xl border border-border bg-surface-raised/60 p-4 space-y-4">
-        <div className="flex flex-wrap gap-4">
-          {STORE_OPTIONS.map((opt) => (
-            <label key={opt.id} className="flex items-center gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={stores.includes(opt.id)}
-                onChange={() => toggleStore(opt.id)}
-              />
-              {opt.label}
-            </label>
-          ))}
+        <div className="space-y-3">
+          {COUNTRY_ORDER.map((country) => {
+            const opts = STORE_CATALOG.filter((opt) => opt.country === country);
+            return (
+              <fieldset key={country} className="space-y-2">
+                <legend className="text-xs font-medium uppercase tracking-wide text-muted">
+                  {COUNTRY_LABELS[country]}
+                </legend>
+                <div className="flex flex-wrap gap-4">
+                  {opts.map((opt) => (
+                    <label
+                      key={opt.id}
+                      className="flex items-center gap-2 text-sm text-ink"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={stores.includes(opt.id)}
+                        onChange={() => toggleStore(opt.id)}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -289,6 +332,11 @@ export function WishlistStoreMatchActivity() {
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="font-medium text-accent">
                               {STORE_LABELS[offer.store] ?? offer.store}
+                              {storeCountryLabel(offer.store) ? (
+                                <span className="ml-1.5 font-normal text-muted">
+                                  · {storeCountryLabel(offer.store)}
+                                </span>
+                              ) : null}
                             </span>
                             <span className="flex items-center gap-2">
                               {offer.condition && offer.conditionKind ? (
@@ -349,7 +397,11 @@ export function WishlistStoreMatchActivity() {
                     <ul className="mt-1 space-y-1 text-xs text-muted">
                       {item.candidates.map((c) => (
                         <li key={`${c.store}-${c.url}`}>
-                          [{STORE_LABELS[c.store] ?? c.store}] {c.name}
+                          [{STORE_LABELS[c.store] ?? c.store}
+                          {storeCountryLabel(c.store)
+                            ? ` · ${storeCountryLabel(c.store)}`
+                            : ""}
+                          ] {c.name}
                           {c.publisher ? ` (${c.publisher})` : ""} —{" "}
                           {formatPrice(c)}
                           {c.condition ? ` ${c.condition}` : ""} (

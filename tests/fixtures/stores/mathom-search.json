@@ -1,0 +1,28 @@
+{
+  "products": [
+    {
+      "id_product": 41170,
+      "name": "Wingspan",
+      "url": "https://mathom.es/es/wingspan/41170-wingspan-8436578810277.html",
+      "price_amount": 48.4,
+      "price": "48,40 €",
+      "manufacturer_name": "Maldito Games",
+      "reference": "",
+      "add_to_cart_url": "https://mathom.es/es/carrito?add=1&id_product=41170"
+    },
+    {
+      "id_product": 42816,
+      "name": "Wingspan: Expansión Europea",
+      "url": "https://mathom.es/es/wingspan/42816-wingspan-expansion-europea-8436578810734.html",
+      "price_amount": 22.5,
+      "price": "22,50 €",
+      "manufacturer_name": "Maldito Games",
+      "reference": "SL20053",
+      "add_to_cart_url": null
+    },
+    {
+      "name": "Sin URL",
+      "price_amount": 9.99
+    }
+  ]
+}

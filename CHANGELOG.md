@@ -13,6 +13,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Workflow **Market price watches cron**: wake de `/api/health` antes del POST, reintentos en 502/503 y cuerpo HTTP visible en fallos (evita exit 22 por cold start de Fly).
 
 ### Added
+- **Wishlist × tiendas: Mathom, Ferretería Ibermadrid y Maldito Games** (España, EUR). El catálogo de tiendas lleva país ISO (`US` / `ES`); la UI agrupa el selector y etiqueta cada oferta por país.
 - **Wishlist × tiendas: Noble Knight** como tercera tienda (API de búsqueda Zoovu). Muestra la condición de cada copia (Nuevo / Sellado / Usado + grado NK, p. ej. `VG+/NM`); el precio es el de la copia más barata en stock y el resto aparece como «Otras copias». Solo juegos (descarta playmats, inserts, fundas y bundles).
 - **Sync BGG diario en Fly:** `POST /api/cron/bgg-sync` (colección + partidas incremental, protegido con `CRON_SECRET`, máx. 1×/20 h, `?force=1` lo salta). Lo llama el workflow del cron de Market en la misma corrida, sin despertares extra de la máquina.
 - Actividad **Insights**: año a año (adquisiciones vs bajas), top 100 BGG frente a la mesa, distribución de jugadores/peso; `GET /api/activities/insights` + UI.
