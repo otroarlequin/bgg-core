@@ -102,6 +102,15 @@ export function describeStoreHttpStatus(
   return `HTTP ${res.status}`;
 }
 
+/** True when a store search failed on a Cloudflare JS challenge (not a generic 403). */
+export function isCloudflareChallengeError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return (
+    /cloudflare/i.test(msg) &&
+    (/challenge/i.test(msg) || /desaf[ií]o javascript/i.test(msg))
+  );
+}
+
 export function describeStoreNetworkError(error: unknown): string {
   if (error instanceof Error) {
     if (error.name === "AbortError" || error.name === "TimeoutError") {

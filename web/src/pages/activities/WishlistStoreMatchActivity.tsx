@@ -279,11 +279,17 @@ export function WishlistStoreMatchActivity() {
             <div className="rounded-xl border border-border bg-surface-card p-3 text-sm text-muted">
               <p className="mb-1 font-medium text-ink-soft">Errores de red</p>
               <ul className="space-y-1">
-                {result.errors.map((err) => (
-                  <li key={`${err.store}-${err.query}`}>
-                    {err.store}: {err.query} — {err.error}
-                  </li>
-                ))}
+                {result.errors.map((err) => {
+                  const label =
+                    STORE_LABELS[err.store as StoreId] ?? err.store;
+                  return (
+                    <li key={`${err.store}-${err.query}-${err.error}`}>
+                      {err.query
+                        ? `${label}: ${err.query} — ${err.error}`
+                        : err.error}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}

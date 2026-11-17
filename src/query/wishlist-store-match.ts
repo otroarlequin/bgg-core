@@ -5,6 +5,7 @@ import {
 } from "../storage/repos/store-search-cache.js";
 import {
   STORE_IDS,
+  isCloudflareChallengeError,
   storeSearchers,
   type StoreId,
   type StoreOffer,
@@ -21,6 +22,15 @@ import {
   scoreTitleMatch,
 } from "../utils/title-match.js";
 import { queryCollection } from "./collection.js";
+
+const CLOUDFLARE_STORE_SKIP_NOTE =
+  "Se omite el resto de juegos de esta tienda en este escaneo.";
+
+function cloudflareScanError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  if (raw.includes(CLOUDFLARE_STORE_SKIP_NOTE)) return raw;
+  return `${raw.replace(/\.?\s*$/, ".")} ${CLOUDFLARE_STORE_SKIP_NOTE}`;
+}
 
 export interface ScoredStoreOffer extends StoreOffer {
   score: number;
@@ -119,6 +129,7 @@ export async function queryWishlistStoreMatch(
   const matches: WishlistStoreMatchItem[] = [];
   const ambiguous: WishlistStoreAmbiguousItem[] = [];
   const errors: StoreSearchError[] = [];
+  const skippedStores = new Set<StoreId>();
   let cacheHits = 0;
   let networkCalls = 0;
   let noOffer = 0;
@@ -129,6 +140,8 @@ export async function queryWishlistStoreMatch(
     const isExpansion = item.subtype === "boardgameexpansion";
 
     for (const store of stores) {
+      if (skippedStores.has(store)) continue;
+
       const query = searchQueryFor(store, item.name);
       const queryKey = query.toLowerCase();
       let offers: StoreOffer[] | null = null;
@@ -147,11 +160,17 @@ export async function queryWishlistStoreMatch(
           offers = await searchers[store](query, { limit: 10 });
           setStoreSearchCache(db, store, queryKey, offers, ttlHours);
         } catch (error) {
+          const cloudflare = isCloudflareChallengeError(error);
           errors.push({
             store,
-            query,
-            error: error instanceof Error ? error.message : String(error),
+            query: cloudflare ? "" : query,
+            error: cloudflare
+              ? cloudflareScanError(error)
+              : error instanceof Error
+                ? error.message
+                : String(error),
           });
+          if (cloudflare) skippedStores.add(store);
           continue;
         }
       }
