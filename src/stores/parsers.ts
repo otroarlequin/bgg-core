@@ -402,8 +402,7 @@ function prestashopOfferFromProduct(
 }
 
 /**
- * PrestaShop 1.7 ajax search (`?ajax=1`) JSON used by Mathom and
- * Ferretería Ibermadrid.
+ * PrestaShop 1.7 ajax search (`?ajax=1`) JSON used by Mathom.
  */
 export function parsePrestashopSearchJson(
   raw: unknown,

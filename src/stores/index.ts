@@ -1,4 +1,3 @@
-import { searchFerreteriaIbermadrid } from "./ferreteriaibermadrid.js";
 import { searchGameNerdz } from "./gamenerdz.js";
 import { searchMalditoGames } from "./malditogames.js";
 import { searchMathom } from "./mathom.js";
@@ -16,7 +15,6 @@ export const storeSearchers: Record<StoreId, StoreSearchFn> = {
   miniaturemarket: searchMiniatureMarket,
   nobleknight: searchNobleKnight,
   mathom: searchMathom,
-  ferreteriaibermadrid: searchFerreteriaIbermadrid,
   malditogames: searchMalditoGames,
 };
 

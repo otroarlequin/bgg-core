@@ -55,6 +55,6 @@ export const wishlistStoreMatchActivity: Activity<
   name: "Wishlist × tiendas",
   kind: "analytical",
   description:
-    "Busca ofertas de tu wishlist en tiendas de España y de Estados Unidos (Mathom, Ferretería Ibermadrid, Maldito Games, Game Nerdz, Miniature Market y Noble Knight; con condición de copias usadas; uso personal).",
+    "Busca ofertas de tu wishlist en tiendas de España y de Estados Unidos (Mathom, Maldito Games, Game Nerdz, Miniature Market y Noble Knight; con condición de copias usadas; uso personal).",
   run: runWishlistStoreMatch,
 };
