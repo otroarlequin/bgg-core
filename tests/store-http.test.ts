@@ -7,6 +7,7 @@ import {
   rateLimitedFetch,
   resetStoreRateLimit,
 } from "../src/stores/http.js";
+import { searchLudonauta } from "../src/stores/ludonauta.js";
 import { searchMalditoGames } from "../src/stores/malditogames.js";
 import { searchMathom } from "../src/stores/mathom.js";
 
@@ -20,6 +21,14 @@ const mathomAjax = readFileSync(join(fixturesDir, "mathom-search.json"), "utf8")
 const mathomHtml = readFileSync(join(fixturesDir, "mathom-search.html"), "utf8");
 const malditoJson = readFileSync(
   join(fixturesDir, "malditogames-search.json"),
+  "utf8",
+);
+const ludonautaSearch = readFileSync(
+  join(fixturesDir, "ludonauta-search.html"),
+  "utf8",
+);
+const ludonautaProduct = readFileSync(
+  join(fixturesDir, "ludonauta-wingspan.html"),
   "utf8",
 );
 
@@ -207,6 +216,29 @@ describe("store HTTP", () => {
 
     await expect(searchMalditoGames("Matchbox")).rejects.toThrow(
       /Maldito Games network error: fetch failed/,
+    );
+  });
+
+  it("searches Ludonauta HTML and never fetches ferreteriaibermadrid.es", async () => {
+    queue.push(htmlResponse("<html>ludonauta</html>"));
+    queue.push(htmlResponse(ludonautaSearch));
+    queue.push(htmlResponse(ludonautaProduct));
+
+    const offers = await searchLudonauta("Wingspan", { productPages: 1 });
+    expect(offers.map((o) => o.store)).toEqual([
+      "amazon",
+      "ferreteria-ibermadrid",
+      "mathom",
+      "dungeon-marvels",
+    ]);
+    expect(offers[1].url).toContain("do.ferreteriaibermadrid.es");
+    expect(calls.map((c) => c.url)).toEqual([
+      "https://www.ludonauta.es/",
+      "https://www.ludonauta.es/buscar/wingspan",
+      "https://www.ludonauta.es/juegos-mesas/wingspan-2019",
+    ]);
+    expect(calls.every((c) => !c.url.includes("ferreteriaibermadrid.es"))).toBe(
+      true,
     );
   });
 });

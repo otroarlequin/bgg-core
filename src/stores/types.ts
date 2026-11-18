@@ -1,9 +1,20 @@
-export type StoreId =
-  | "gamenerdz"
-  | "miniaturemarket"
-  | "nobleknight"
-  | "mathom"
-  | "malditogames";
+export const STORE_SOURCE_IDS = [
+  "gamenerdz",
+  "miniaturemarket",
+  "nobleknight",
+  "mathom",
+  "malditogames",
+  "ludonauta",
+] as const;
+
+/** Checkbox / searcher identity. Ludonauta expands into per-shop offers. */
+export type StoreSourceId = (typeof STORE_SOURCE_IDS)[number];
+
+/**
+ * Shop identity on an offer. Direct searchers plus slugs mapped from
+ * Ludonauta (amazon, ferreteria-ibermadrid, …).
+ */
+export type StoreId = StoreSourceId | (string & {});
 
 /** ISO 3166-1 alpha-2 country of the shop, not the product origin. */
 export type StoreCountry = "US" | "ES";
@@ -33,21 +44,27 @@ export const STORES: readonly StoreInfo[] = [
     country: "ES",
     currency: "EUR",
   },
+  {
+    id: "ludonauta",
+    label: "Ludonauta (comparador)",
+    country: "ES",
+    currency: "EUR",
+  },
 ];
 
-export const STORE_IDS: StoreId[] = STORES.map((store) => store.id);
+export const STORE_IDS: StoreSourceId[] = [...STORE_SOURCE_IDS];
 
-export const STORE_BY_ID: Record<StoreId, StoreInfo> = Object.fromEntries(
+export const STORE_BY_ID: Record<string, StoreInfo> = Object.fromEntries(
   STORES.map((store) => [store.id, store]),
-) as Record<StoreId, StoreInfo>;
+);
 
-export const STORE_LABELS: Record<StoreId, string> = Object.fromEntries(
+export const STORE_LABELS: Record<string, string> = Object.fromEntries(
   STORES.map((store) => [store.id, store.label]),
-) as Record<StoreId, string>;
+);
 
-export const STORE_COUNTRIES: Record<StoreId, StoreCountry> = Object.fromEntries(
+export const STORE_COUNTRIES: Record<string, StoreCountry> = Object.fromEntries(
   STORES.map((store) => [store.id, store.country]),
-) as Record<StoreId, StoreCountry>;
+);
 
 /** new = factory new; sealed = still shrink-wrapped but box graded below mint. */
 export type ConditionKind = "new" | "sealed" | "used";
@@ -71,6 +88,9 @@ export interface StoreOffer {
   inStock: boolean | null;
   /** Store publisher / Manufacturer when known. */
   publisher: string | null;
+  /** Display name when `store` is a Ludonauta slug not in `STORES`. */
+  storeLabel?: string | null;
+  storeCountry?: StoreCountry | null;
   /** Condition of the copy behind `price` (cheapest in-stock variant). */
   condition?: string | null;
   conditionKind?: ConditionKind | null;

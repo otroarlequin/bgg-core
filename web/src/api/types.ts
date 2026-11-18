@@ -494,7 +494,9 @@ export type StoreId =
   | "miniaturemarket"
   | "nobleknight"
   | "mathom"
-  | "malditogames";
+  | "malditogames"
+  | "ludonauta"
+  | (string & {});
 
 export type StoreCountry = "US" | "ES";
 
@@ -516,6 +518,8 @@ export interface ScoredStoreOffer {
   sku: string | null;
   inStock: boolean | null;
   publisher: string | null;
+  storeLabel?: string | null;
+  storeCountry?: StoreCountry | null;
   condition?: string | null;
   conditionKind?: ConditionKind | null;
   variants?: StoreOfferVariant[];

@@ -19,6 +19,13 @@ import {
   parsePrestashopSearchJson,
 } from "../src/stores/parsers.js";
 import {
+  isIbermadridHost,
+  ludonautaSearchUrl,
+  mapLudonautaShop,
+  parseLudonautaOfferTable,
+  parseLudonautaSearchHtml,
+} from "../src/stores/ludonauta-parse.js";
+import {
   STORE_COUNTRIES,
   STORE_IDS,
   type StoreOffer,
@@ -260,12 +267,81 @@ describe("store catalog", () => {
       "nobleknight",
       "mathom",
       "malditogames",
+      "ludonauta",
     ]);
     expect(STORE_COUNTRIES.gamenerdz).toBe("US");
     expect(STORE_COUNTRIES.miniaturemarket).toBe("US");
     expect(STORE_COUNTRIES.nobleknight).toBe("US");
     expect(STORE_COUNTRIES.mathom).toBe("ES");
     expect(STORE_COUNTRIES.malditogames).toBe("ES");
+    expect(STORE_COUNTRIES.ludonauta).toBe("ES");
+  });
+});
+
+describe("Ludonauta HTML", () => {
+  it("maps shop slugs and does not treat Awin as a fetch target we would confuse with Ludonauta", () => {
+    expect(mapLudonautaShop("Mathom", "tienda-mathom-1.png")).toMatchObject({
+      id: "mathom",
+      country: "ES",
+    });
+    expect(
+      mapLudonautaShop("Ferretería IberMadrid", "tienda-ferreteria-ibermadrid-1.png"),
+    ).toMatchObject({
+      id: "ferreteria-ibermadrid",
+      label: "Ferretería IberMadrid",
+    });
+    expect(
+      isIbermadridHost(
+        "https://do.ferreteriaibermadrid.es/t/t?url=https://ferreteriaibermadrid.es/x",
+      ),
+    ).toBe(true);
+    expect(ludonautaSearchUrl("Wingspan")).toBe(
+      "https://www.ludonauta.es/buscar/wingspan",
+    );
+  });
+
+  it("parses search cards and skips off-site review links", () => {
+    const html = readFileSync(join(fixturesDir, "ludonauta-search.html"), "utf8");
+    const hits = parseLudonautaSearchHtml(html);
+    expect(hits.map((h) => h.name)).toEqual([
+      "Wingspan",
+      "Wingspan: Expansión Europea",
+    ]);
+    expect(hits[0].url).toBe("https://www.ludonauta.es/juegos-mesas/wingspan-2019");
+    expect(hits[0].lineSubProduct).toBe(false);
+    expect(hits[1].lineSubProduct).toBe(true);
+    expect(hits[0].previewOffers[0]).toMatchObject({
+      store: "amazon",
+      storeLabel: "Amazon",
+      price: 38.2,
+      inStock: true,
+    });
+    expect(hits[1].previewOffers[0]).toMatchObject({
+      store: "ferreteria-ibermadrid",
+      inStock: true,
+    });
+    expect(hits[1].previewOffers[0].url).toContain("do.ferreteriaibermadrid.es");
+  });
+
+  it("parses the product offer table including Awin Ibermadrid and restock", () => {
+    const html = readFileSync(join(fixturesDir, "ludonauta-wingspan.html"), "utf8");
+    const offers = parseLudonautaOfferTable(html, "fallback");
+    expect(offers.map((o) => o.store)).toEqual([
+      "amazon",
+      "ferreteria-ibermadrid",
+      "mathom",
+      "dungeon-marvels",
+    ]);
+    expect(offers[0].name).toBe("Wingspan");
+    expect(offers[0].price).toBe(38.2);
+    expect(offers[1].url).toContain("do.ferreteriaibermadrid.es");
+    expect(offers[1].url).not.toMatch(/^https:\/\/(www\.)?ferreteriaibermadrid\.es\//);
+    expect(offers[2]).toMatchObject({ store: "mathom", price: 48.4, inStock: true });
+    expect(offers[3]).toMatchObject({
+      store: "dungeon-marvels",
+      inStock: false,
+      price: 49.5,
+    });
   });
 });
 
@@ -467,6 +543,69 @@ describe("queryWishlistStoreMatch cache + match", () => {
     expect(result.errors[0].store).toBe("gamenerdz");
     expect(result.matches).toHaveLength(1);
     expect(result.matches[0].offers[0].store).toBe("miniaturemarket");
+  });
+
+  it("expands Ludonauta into per-shop offers grouped by store", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bgg-store-ludo-"));
+    const db = createDatabase(join(dir, "test.db"));
+    const storage = createStorageService(db);
+
+    storage.collection.upsertCollectionEntries(storage.db, [
+      entry({
+        collId: 1,
+        bggId: 266192,
+        name: "Wingspan",
+        wishlist: true,
+        wishlistPriority: 1,
+      }),
+    ]);
+
+    const result = await queryWishlistStoreMatch(db, {
+      stores: ["ludonauta"],
+      maxItems: 5,
+      forceRefresh: true,
+      searchers: {
+        ludonauta: async () => [
+          offer({
+            store: "amazon",
+            storeLabel: "Amazon",
+            storeCountry: "ES",
+            name: "Wingspan",
+            price: 38.2,
+            currency: "EUR",
+            url: "https://www.amazon.es/wingspan",
+          }),
+          offer({
+            store: "ferreteria-ibermadrid",
+            storeLabel: "Ferretería Ibermadrid",
+            storeCountry: "ES",
+            name: "Wingspan",
+            price: 46.75,
+            currency: "EUR",
+            url: "https://do.ferreteriaibermadrid.es/t/t?url=https://ferreteriaibermadrid.es/wingspan",
+          }),
+          offer({
+            store: "mathom",
+            storeLabel: "Mathom",
+            storeCountry: "ES",
+            name: "Wingspan",
+            price: 48.4,
+            currency: "EUR",
+            url: "https://mathom.es/es/wingspan.html",
+          }),
+        ],
+      },
+    });
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0].offers.map((o) => o.store)).toEqual([
+      "amazon",
+      "ferreteria-ibermadrid",
+      "mathom",
+    ]);
+    expect(result.matches[0].offers[0].price).toBe(38.2);
+    expect(result.matches[0].offers[1].url).toContain("do.ferreteriaibermadrid.es");
   });
 
   it("does not strong-match wrong edition or publisher conflict", async () => {

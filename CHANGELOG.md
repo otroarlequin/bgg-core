@@ -8,7 +8,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Removed
-- **Ferretería Ibermadrid** del selector Wishlist × tiendas (catálogo, adaptador PrestaShop, fixtures, checkbox). El origen `ferreteriaibermadrid.es` está detrás de un desafío JS de Cloudflare también desde IP doméstica; no hay búsqueda/API pública. Ludonauta.es lista esos productos como comparador (HTML público, afiliación Awin hacia la tienda; sin JSON API). No se scrapea Ludonauta ni se resuelve Cloudflare. Mathom y Maldito Games siguen.
+- **Ferretería Ibermadrid** como adaptador directo de Wishlist × tiendas (catálogo PrestaShop, fixtures, checkbox). El origen `ferreteriaibermadrid.es` está detrás de un desafío JS de Cloudflare también desde IP doméstica.
 
 ### Fixed
 - **Wishlist × tiendas (Mathom / Maldito):** las búsquedas van con cabeceras de navegador (UA Chrome actual, `Accept`/`Referer`/`Origin`, cookies de sesión pública, timeout y reintentos). Ajax PrestaShop cae a la página HTML de búsqueda si Cloudflare/WAF bloquea el XHR. Un 403 o `fetch failed` de una tienda sigue sin abortar el scan. Cloudflare JS challenge en IPs de datacenter (p. ej. Fly) puede seguir bloqueando; en IP doméstica las mismas cabeceras suelen bastar.
@@ -17,6 +17,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Workflow **Market price watches cron**: wake de `/api/health` antes del POST, reintentos en 502/503 y cuerpo HTTP visible en fallos (evita exit 22 por cold start de Fly).
 
 ### Added
+- **Wishlist × tiendas: Ludonauta** (comparador ES). Busca el juego en `GET /buscar/{q}` y lee la tabla pública `#juegos-mesas-tiendas`; cada oferta se muestra agrupada por tienda/país (Amazon, Mathom, Ferretería Ibermadrid vía Awin, etc.). No hay JSON API; no se consulta ferreteriaibermadrid.es ni se resuelve Cloudflare. Mathom y Maldito Games siguen como fuentes directas.
 - **Wishlist × tiendas: Mathom, Ferretería Ibermadrid y Maldito Games** (España, EUR). El catálogo de tiendas lleva país ISO (`US` / `ES`); la UI agrupa el selector y etiqueta cada oferta por país.
 - **Wishlist × tiendas: Noble Knight** como tercera tienda (API de búsqueda Zoovu). Muestra la condición de cada copia (Nuevo / Sellado / Usado + grado NK, p. ej. `VG+/NM`); el precio es el de la copia más barata en stock y el resto aparece como «Otras copias». Solo juegos (descarta playmats, inserts, fundas y bundles).
 - **Sync BGG diario en Fly:** `POST /api/cron/bgg-sync` (colección + partidas incremental, protegido con `CRON_SECRET`, máx. 1×/20 h, `?force=1` lo salta). Lo llama el workflow del cron de Market en la misma corrida, sin despertares extra de la máquina.

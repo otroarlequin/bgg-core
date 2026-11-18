@@ -19,6 +19,7 @@ const STORE_CATALOG: Array<{
   { id: "nobleknight", label: "Noble Knight", country: "US" },
   { id: "mathom", label: "Mathom", country: "ES" },
   { id: "malditogames", label: "Maldito Games", country: "ES" },
+  { id: "ludonauta", label: "Ludonauta (comparador)", country: "ES" },
 ];
 
 const STORE_LABELS: Record<StoreId, string> = Object.fromEntries(
@@ -59,9 +60,41 @@ function formatPrice(offer: Pick<ScoredStoreOffer, "price" | "currency">): strin
   return `$${offer.price.toFixed(2)} ${offer.currency}`;
 }
 
-function storeCountryLabel(store: StoreId): string | null {
-  const country = STORE_COUNTRIES[store];
+function offerStoreLabel(offer: ScoredStoreOffer): string {
+  return offer.storeLabel?.trim() || STORE_LABELS[offer.store] || offer.store;
+}
+
+function offerStoreCountry(offer: ScoredStoreOffer): StoreCountry | null {
+  if (offer.storeCountry === "ES" || offer.storeCountry === "US") {
+    return offer.storeCountry;
+  }
+  return STORE_COUNTRIES[offer.store] ?? null;
+}
+
+function storeCountryLabel(offer: ScoredStoreOffer): string | null {
+  const country = offerStoreCountry(offer);
   return country ? COUNTRY_LABELS[country] : null;
+}
+
+function offersByCountry(offers: ScoredStoreOffer[]): Array<{
+  country: StoreCountry | null;
+  label: string;
+  offers: ScoredStoreOffer[];
+}> {
+  const groups: Array<{
+    country: StoreCountry | null;
+    label: string;
+    offers: ScoredStoreOffer[];
+  }> = COUNTRY_ORDER.map((country) => ({
+    country,
+    label: COUNTRY_LABELS[country],
+    offers: offers.filter((offer) => offerStoreCountry(offer) === country),
+  })).filter((group) => group.offers.length > 0);
+  const rest = offers.filter((offer) => offerStoreCountry(offer) == null);
+  if (rest.length > 0) {
+    groups.push({ country: null, label: "Otras", offers: rest });
+  }
+  return groups;
 }
 
 function ConditionChip({
@@ -175,9 +208,11 @@ export function WishlistStoreMatchActivity() {
           Wishlist × tiendas
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Busca en vivo cada juego de tu wishlist en tiendas de España (Mathom,
-          Maldito Games) y de Estados Unidos (Game Nerdz,
-          Miniature Market, Noble Knight). Noble Knight vende copias usadas
+          Busca en vivo cada juego de tu wishlist. Ludonauta compara tiendas
+          españolas (Amazon, Mathom, Ferretería Ibermadrid vía afiliado, y
+          otras) sin consultar ferreteriaibermadrid.es. Mathom y Maldito Games
+          también se pueden consultar directo. Estados Unidos: Game Nerdz,
+          Miniature Market, Noble Knight. Noble Knight vende copias usadas
           graduadas: se muestra la condición de cada copia y el precio es el de
           la más barata. Uso personal: rate limit + caché ~24h. Los resultados
           pueden desactualizarse.
@@ -322,18 +357,24 @@ export function WishlistStoreMatchActivity() {
                         </div>
                       </div>
                     </div>
-                    <ul className="mt-3 space-y-2">
-                      {item.offers.map((offer) => (
+                    <div className="mt-3 space-y-3">
+                      {offersByCountry(item.offers).map((group) => (
+                        <div key={group.label}>
+                          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">
+                            {group.label}
+                          </p>
+                          <ul className="space-y-2">
+                            {group.offers.map((offer) => (
                         <li
                           key={`${offer.store}-${offer.url}`}
                           className="rounded-lg border border-border bg-surface-card px-3 py-2 text-sm"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="font-medium text-accent">
-                              {STORE_LABELS[offer.store] ?? offer.store}
-                              {storeCountryLabel(offer.store) ? (
+                              {offerStoreLabel(offer)}
+                              {storeCountryLabel(offer) ? (
                                 <span className="ml-1.5 font-normal text-muted">
-                                  · {storeCountryLabel(offer.store)}
+                                  · {storeCountryLabel(offer)}
                                 </span>
                               ) : null}
                             </span>
@@ -371,8 +412,11 @@ export function WishlistStoreMatchActivity() {
                           </div>
                           <OtherCopies offer={offer} />
                         </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -396,9 +440,9 @@ export function WishlistStoreMatchActivity() {
                     <ul className="mt-1 space-y-1 text-xs text-muted">
                       {item.candidates.map((c) => (
                         <li key={`${c.store}-${c.url}`}>
-                          [{STORE_LABELS[c.store] ?? c.store}
-                          {storeCountryLabel(c.store)
-                            ? ` · ${storeCountryLabel(c.store)}`
+                          [{offerStoreLabel(c)}
+                          {storeCountryLabel(c)
+                            ? ` · ${storeCountryLabel(c)}`
                             : ""}
                           ] {c.name}
                           {c.publisher ? ` (${c.publisher})` : ""} —{" "}

@@ -9,6 +9,8 @@ import {
   type StoreId,
   type StoreOffer,
   type StoreSearchError,
+  type StoreSearchFn,
+  type StoreSourceId,
 } from "../stores/index.js";
 import {
   TITLE_AMBIGUOUS_MIN,
@@ -48,7 +50,7 @@ export interface WishlistStoreMatchParams {
   forceRefresh?: boolean;
   minPriority?: number;
   /** Inject searchers for tests. */
-  searchers?: Partial<Record<StoreId, typeof storeSearchers.gamenerdz>>;
+  searchers?: Partial<Record<StoreSourceId, StoreSearchFn>>;
   cacheTtlHours?: number;
 }
 
@@ -63,13 +65,13 @@ export interface WishlistStoreMatchResult {
   errors: StoreSearchError[];
 }
 
-function searchQueryFor(store: StoreId, gameName: string): string {
-  return store === "nobleknight"
+function searchQueryFor(store: StoreSourceId, gameName: string): string {
+  return store === "nobleknight" || store === "ludonauta"
     ? buildFullSearchQuery(gameName)
     : buildSearchQuery(gameName);
 }
 
-function pickStores(requested?: StoreId[]): StoreId[] {
+function pickStores(requested?: StoreId[]): StoreSourceId[] {
   if (!requested?.length) return [...STORE_IDS];
   return STORE_IDS.filter((id) => requested.includes(id));
 }
